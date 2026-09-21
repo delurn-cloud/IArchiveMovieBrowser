@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Internet Archive Movie Browser"
-        Width="560" Height="335"
-        MinWidth="460" MinHeight="270"
+        Width="560" Height="455"
+        MinWidth="460" MinHeight="390"
         WindowStartupLocation="CenterScreen">
 
     <StackPanel Margin="12">
@@ -97,6 +97,47 @@
                         HorizontalAlignment="Left"
                         IsEnabled="False"
                         Click="OnOpenResultsClick"/>
+            </StackPanel>
+        </Border>
+<Border BorderThickness="1"
+                BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
+                Background="{x:Static SystemColors.ControlBrush}"
+                Padding="8"
+                Margin="0,10,0,0">
+            <StackPanel>
+                <TextBlock Text="External player"
+                           FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                <TextBox x:Name="PlayerPathText"
+                         IsReadOnly="True"
+                         FontSize="11"
+                         TextWrapping="Wrap"
+                         Margin="0,0,0,6"
+                         BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
+                         AutomationProperties.Name="External player executable path"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <Button x:Name="ChoosePlayerButton"
+                            Content="Choose player…"
+                            Width="130" Height="30"
+                            Margin="0,0,8,0"
+                            Click="OnChoosePlayerClick"/>
+                    <Button x:Name="ChangePlayerButton"
+                            Content="Change…"
+                            Width="96" Height="30"
+                            Margin="0,0,8,0"
+                            Visibility="Collapsed"
+                            Click="OnChoosePlayerClick"/>
+                    <Button x:Name="ClearPlayerButton"
+                            Content="Clear"
+                            Width="80" Height="30"
+                            Visibility="Collapsed"
+                            Click="OnClearPlayerClick"/>
+                </StackPanel>
+                <TextBlock x:Name="PlayerStatusText"
+                           Text="Select a media-player executable (.exe) to open selected video streams."
+                           FontSize="12" TextWrapping="Wrap"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"
+                           AutomationProperties.Name="External player status"/>
             </StackPanel>
         </Border>
     </StackPanel>

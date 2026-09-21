@@ -1,8 +1,10 @@
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Win32;
 using IArchiveMovieBrowser.Domain;
 using IArchiveMovieBrowser.Services;
 
@@ -28,17 +30,22 @@ namespace IArchiveMovieBrowser
 
         private CompletedSearch? _latest;
 
+        private readonly IPlayerExecutableStorage _playerStorage;
+
         public MainWindow()
         {
             InitializeComponent();
 
             _http = new HttpClient();
             _client = new InternetArchiveApiClient(_http);
+            _playerStorage = new ApplicationPlayerSettings();
 
             SearchProgress.Visibility = Visibility.Collapsed;
             ResultStage.Visibility = Visibility.Collapsed;
             StatusText.Text = SearchDisplayText.EmptyQueryText();
             SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
+
+            ApplyPlayerState(ExternalPlayerLogic.AnalyzeStoredPath(_playerStorage.Load()));
 
             Closed += (sender, e) =>
             {
@@ -51,6 +58,78 @@ namespace IArchiveMovieBrowser
                 }
                 _http.Dispose();
             };
+        }
+
+private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = "Choose external media player",
+                Filter = "Executable (*.exe)|*.exe|All files (*.*)|*.*",
+                CheckFileExists = true,
+                Multiselect = false
+            };
+
+            if (dialog.ShowDialog(this) != true)
+            {
+                return; // cancelled: no state change
+            }
+
+            // Validate the chosen path; only a valid absolute .exe is saved.
+            if (ExternalPlayerLogic.TryNormalizeForSave(dialog.FileName, out string? normalized))
+            {
+                _playerStorage.Save(normalized);
+                ApplyPlayerState(ExternalPlayerLogic.AnalyzeStoredPath(normalized));
+            }
+        }
+
+        private void OnClearPlayerClick(object sender, RoutedEventArgs e)
+        {
+            _playerStorage.Clear();
+            ApplyPlayerState(ExternalPlayerLogic.AnalyzeStoredPath(null));
+        }
+
+        private void ApplyPlayerState(PlayerConfiguration config)
+        {
+            switch (config.State)
+            {
+                case PlayerConfigurationState.Ready:
+                    PlayerPathText.Text = config.ValidatedPath;
+                    PlayerStatusText.Text = PlayerDisplayText.ReadyStatus(config.ValidatedPath!);
+                    ShowChooseButton(false);
+                    break;
+
+                case PlayerConfigurationState.Missing:
+                    PlayerPathText.Text = config.ValidatedPath;
+                    PlayerStatusText.Text = PlayerDisplayText.MissingStatus;
+                    ShowChooseButton(true);
+                    break;
+
+                case PlayerConfigurationState.Invalid:
+                    PlayerPathText.Text = config.ValidatedPath ?? "";
+                    PlayerStatusText.Text = PlayerDisplayText.InvalidStatus;
+                    ShowChooseButton(true);
+                    break;
+
+                default: // NotConfigured
+                    PlayerPathText.Text = "";
+                    PlayerStatusText.Text = PlayerDisplayText.NotConfiguredStatus;
+                    ShowChooseButton(true);
+                    break;
+            }
+        }
+
+        private void ShowChooseButton(bool notConfigured)
+        {
+            ChoosePlayerButton.Visibility = notConfigured
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            ChangePlayerButton.Visibility = notConfigured
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+            ClearPlayerButton.Visibility = notConfigured
+                ? Visibility.Collapsed
+                : Visibility.Visible;
         }
 
         private void OnSearchClick(object sender, RoutedEventArgs e)
