@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Internet Archive Movie Browser"
-        Width="560" Height="245"
-        MinWidth="460" MinHeight="210"
+        Width="560" Height="335"
+        MinWidth="460" MinHeight="270"
         WindowStartupLocation="CenterScreen">
 
     <StackPanel Margin="12">
