@@ -1,0 +1,113 @@
+<Window x:Class="IArchiveMovieBrowser.DetailsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Details — Internet Archive Movie Browser"
+        Width="820" Height="560"
+        MinWidth="580" MinHeight="420"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top compact action/status area -->
+        <Grid Grid.Row="0" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="RefreshDetailsButton"
+                    Grid.Column="0"
+                    Content="Refresh Details"
+                    Width="120" Height="30"
+                    IsEnabled="False"
+                    Click="OnRefreshDetailsClick"/>
+            <TextBlock x:Name="StatusText"
+                       Grid.Column="1"
+                       Text=""
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center"
+                       Margin="8,0,0,0"
+                       Foreground="{x:Static SystemColors.ControlTextBrush}"
+                       AutomationProperties.Name="Details status"/>
+        </Grid>
+
+        <!-- Scrollable single-column content -->
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <!-- Primary facts -->
+                <StackPanel x:Name="FactsPanel" Margin="0,0,0,10">
+                    <TextBlock x:Name="TitleText" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"
+                               Margin="0,0,0,4" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                    <TextBlock x:Name="IdentifierText" FontSize="12" TextWrapping="Wrap"
+                               Margin="0,0,0,2" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                    <TextBlock x:Name="CreatorText" FontSize="12" TextWrapping="Wrap"
+                               Margin="0,0,0,2" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                    <TextBlock x:Name="DateYearText" FontSize="12" TextWrapping="Wrap"
+                               Margin="0,0,0,2" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                    <TextBlock x:Name="MediaTypeText" FontSize="12" TextWrapping="Wrap"
+                               Margin="0,0,0,2" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                    <TextBlock x:Name="CollectionsText" FontSize="12" TextWrapping="Wrap"
+                               Margin="0,0,0,2" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                    <TextBlock x:Name="SubjectsText" FontSize="12" TextWrapping="Wrap"
+                               Margin="0,0,0,2" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                    <TextBlock x:Name="LicenseText" FontSize="12" TextWrapping="Wrap"
+                               Margin="0,0,0,2" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                </StackPanel>
+
+                <!-- Description: expanded but bounded via an Expander -->
+                <Expander x:Name="DescriptionExpander"
+                          Header="Description"
+                          IsExpanded="True"
+                          Margin="0,0,0,10"
+                          FontSize="13">
+                    <TextBlock x:Name="DescriptionText"
+                               TextWrapping="Wrap"
+                               MaxHeight="140"
+                               Margin="0,4,0,4"
+                               FontSize="12"
+                               Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                </Expander>
+
+                <!-- Files section: dominant scrollable inventory -->
+                <TextBlock Text="Files" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                <ListView x:Name="FilesList"
+                          MinHeight="120"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
+                          BorderThickness="1"
+                          Foreground="{x:Static SystemColors.ControlTextBrush}">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <!--__FILEROW__-->
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding NameText}" TextWrapping="Wrap" FontSize="12"/>
+                                <TextBlock Grid.Column="1" Text="{Binding FormatText}" FontSize="12" Margin="6,0,0,0"/>
+                                <TextBlock Grid.Column="2" Text="{Binding SizeText}" FontSize="12" Margin="6,0,0,0"/>
+                                <TextBlock Grid.Column="3" Text="{Binding KindText}" FontSize="12" Margin="6,0,0,0"/>
+                                <TextBlock Grid.Column="4" Text="{Binding MediaText}" FontSize="12" Margin="6,0,0,0"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

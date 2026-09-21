@@ -27,6 +27,11 @@ namespace IArchiveMovieBrowser
         private long _numFound;
         private bool _closing;
 
+        private readonly List<string> _pageIdentifiers = new List<string>();
+        private DetailsWindow? _detailsWindow;
+        private DateTime _lastMouseUpUtc = DateTime.MinValue;
+        private static readonly TimeSpan DoubleClickWindow = TimeSpan.FromMilliseconds(500);
+
         public SearchResultsWindow(IInternetArchiveApiClient client)
         {
             InitializeComponent();
@@ -36,7 +41,15 @@ namespace IArchiveMovieBrowser
             {
                 _closing = true;
                 CancelActiveRequest();
+                if (_detailsWindow is not null)
+                {
+                    _detailsWindow.Close();
+                    _detailsWindow = null;
+                }
             };
+
+            ResultsList.SelectionChanged += OnSelectionChanged;
+            ResultsList.MouseUp += OnResultsMouseUp;
         }
 
         /// <summary>
@@ -148,9 +161,11 @@ namespace IArchiveMovieBrowser
         private void ShowResults(IReadOnlyList<InternetArchiveSearchResult> results, int page)
         {
             var lines = new List<string>();
+            _pageIdentifiers.Clear();
             foreach (InternetArchiveSearchResult item in results)
             {
                 lines.Add(SearchDisplayText.RowText(item));
+                _pageIdentifiers.Add(item.Identifier);
             }
 
             ResultsList.ItemsSource = lines;
@@ -158,10 +173,103 @@ namespace IArchiveMovieBrowser
             PreviousButton.IsEnabled = SearchDisplayText.PreviousEnabled(page);
             NextButton.IsEnabled = SearchDisplayText.NextEnabled(_numFound, page, PageSize);
             RefreshButton.IsEnabled = true;
+            UpdateOpenDetailsEnabled();
 
             StatusText.Text = lines.Count == 0
                 ? SearchDisplayText.StatusNoResults()
                 : SearchDisplayText.StatusReady(page);
+        }
+
+        private void OnOpenDetailsClick(object sender, RoutedEventArgs e)
+        {
+            string? identifier = SelectedIdentifier();
+            if (identifier is not null)
+            {
+                ShowOrOpenDetails(identifier);
+            }
+        }
+
+        private void OnSelectionChanged(object sender, EventArgs e)
+        {
+            UpdateOpenDetailsEnabled();
+        }
+
+        private void OnResultsDoubleClicked(object sender, EventArgs e)
+        {
+            string? identifier = SelectedIdentifier();
+            if (identifier is not null)
+            {
+                ShowOrOpenDetails(identifier);
+            }
+        }
+
+        /// <summary>
+        /// Detects a double-click via the ListView MouseUp event (no dedicated double-click
+        /// event exists in this control dialect): two mouse-ups within the tolerance window
+        /// are treated as a double-click and routed through the shared open method.
+        /// </summary>
+        private void OnResultsMouseUp(object sender, EventArgs e)
+        {
+            DateTime now = DateTime.UtcNow;
+            bool isDoubleClick = (now - _lastMouseUpUtc) <= DoubleClickWindow;
+            _lastMouseUpUtc = now;
+
+            if (isDoubleClick)
+            {
+                OnResultsDoubleClicked(sender, e);
+            }
+        }
+
+        /// <summary>Shared open path used by both the Open Details button and double-click.</summary>
+        private void ShowOrOpenDetails(string identifier)
+        {
+            if (_detailsWindow is null)
+            {
+                _detailsWindow = new DetailsWindow(_client)
+                {
+                    Owner = this
+                };
+                _detailsWindow.Closed += (sender, e) => _detailsWindow = null;
+            }
+
+            _detailsWindow.LoadIdentifier(identifier);
+            _detailsWindow.Show();
+        }
+
+        private string? SelectedIdentifier()
+        {
+            Object? selected = ResultsList.SelectedItem;
+            if (selected is null)
+            {
+                return null;
+            }
+
+            // selected is the two-line display string for the current row.
+        if (selected is null)
+        {
+            return null;
+        }
+        string? selectedLine = selected.ToString();
+        if (selectedLine is null)
+        {
+            return null;
+        }
+        int index = 0;
+        foreach (string line in (IEnumerable<Object>)ResultsList.ItemsSource)
+            {
+                if (line == selectedLine && index < _pageIdentifiers.Count)
+                {
+                    string id = _pageIdentifiers[index];
+                    return string.IsNullOrWhiteSpace(id) ? null : id;
+                }
+                index++;
+            }
+            return null;
+        }
+
+        private void UpdateOpenDetailsEnabled()
+        {
+            OpenDetailsButton.IsEnabled = SelectedIdentifier() is not null;
         }
 
         private void ShowStatus(string text)

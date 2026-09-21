@@ -39,26 +39,34 @@
                     Click="OnRefreshClick"/>
         </Grid>
 
-        <!-- Row 1: pagination -->
+        <!-- Row 1: pagination + open details -->
         <Grid Grid.Row="1" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <Button x:Name="PreviousButton"
-                    Grid.Column="1"
+                    Grid.Column="0"
                     Content="Previous"
                     Width="88" Height="30"
                     IsEnabled="False"
                     Click="OnPreviousClick"/>
             <Button x:Name="NextButton"
-                    Grid.Column="2"
+                    Grid.Column="1"
                     Content="Next"
                     Width="72" Height="30"
                     Margin="8,0,0,0"
                     IsEnabled="False"
                     Click="OnNextClick"/>
+            <Button x:Name="OpenDetailsButton"
+                    Grid.Column="3"
+                    Content="Open Details"
+                    Width="110" Height="30"
+                    Margin="8,0,0,0"
+                    IsEnabled="False"
+                    Click="OnOpenDetailsClick"/>
         </Grid>
 
         <!-- Row 2: results (dominant) -->
