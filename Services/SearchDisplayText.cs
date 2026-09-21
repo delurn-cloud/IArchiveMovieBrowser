@@ -137,6 +137,41 @@ public static class SearchDisplayText
     public static string QuerySummaryText(string query, long numFound, int page) =>
         "Query: \"" + query + "\"" + Separator + ResultsSummary(numFound, page);
 
+    // --- Search scope selection (launcher) ----------------------------------------
+
+    public const string ScopeLabelText = "Search scope";
+    public const string WatchableVideoScopeLabel = "Watchable video";
+    public const string RelatedMaterialsScopeLabel = "Related materials";
+    public const string EverythingScopeLabel = "Everything";
+
+    public const string RelatedMaterialsTooltip =
+        "Non-video Internet Archive items matching your search, such as texts, audio, software, or images.";
+
+    /// <summary>Human-readable label for a scope, matching the launcher ComboBox items.</summary>
+    public static string ScopeLabel(SearchScope scope)
+    {
+        return scope switch
+        {
+            SearchScope.WatchableVideo => WatchableVideoScopeLabel,
+            SearchScope.RelatedMaterials => RelatedMaterialsScopeLabel,
+            _ => EverythingScopeLabel
+        };
+    }
+
+    /// <summary>
+    /// The ordered scope options as shown in the launcher, with Watchable video first so it
+    /// is the default selection.
+    /// </summary>
+    public static IReadOnlyList<SearchScope> ScopeOptions()
+    {
+        return new List<SearchScope>
+        {
+            SearchScope.WatchableVideo,
+            SearchScope.RelatedMaterials,
+            SearchScope.Everything
+        };
+    }
+
     /// <summary>Previous is enabled on any page after the first.</summary>
     public static bool PreviousEnabled(int page) => page > 1;
 

@@ -78,16 +78,16 @@ public sealed class InternetArchiveApiClient : IInternetArchiveApiClient
 
     /// <summary>
     /// Builds the advancedsearch.php request URI. Query shape (documented): a simple
-    /// title search over the user-provided text:
-    ///   q=title:(&lt;encoded user text&gt;)&amp;rows=&lt;page size&gt;&amp;page=&lt;page&gt;
+    /// title search over the user-provided text, scoped by media-type:
+    ///   q=&lt;SearchScopeQueryBuilder expression&gt;&amp;rows=&lt;page size&gt;&amp;page=&lt;page&gt;
     ///   &amp;output=json&amp;fl=&lt;explicit field list&gt;
-    /// User text is percent-encoded, never concatenated raw into the URI.
+    /// User text and the whole expression are percent-encoded, never concatenated raw.
     /// </summary>
     private static Uri BuildSearchUri(InternetArchiveSearchRequest request)
     {
-        string titleQuery = "title:(" + request.Query + ")";
+        string expression = SearchScopeQueryBuilder.BuildQuery(request.Query, request.Scope);
         string queryString =
-            "q=" + Uri.EscapeDataString(titleQuery) +
+            "q=" + Uri.EscapeDataString(expression) +
             "&output=json" +
             "&page=" + request.Page.ToString() +
             "&rows=" + request.PageSize.ToString() +

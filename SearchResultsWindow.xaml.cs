@@ -25,6 +25,7 @@ namespace IArchiveMovieBrowser
         private string _query = "";
         private int _page = 1;
         private long _numFound;
+        private SearchScope _scope = SearchScope.Everything;
         private bool _closing;
 
         private readonly List<string> _pageIdentifiers = new List<string>();
@@ -69,6 +70,7 @@ namespace IArchiveMovieBrowser
             _query = completedSearch.Query;
             _page = completedSearch.Page;
             _numFound = completedSearch.NumFound;
+            _scope = completedSearch.Scope;
 
             ShowResults(completedSearch.Results, completedSearch.Page);
         }
@@ -103,7 +105,7 @@ namespace IArchiveMovieBrowser
 
             try
             {
-                var request = new InternetArchiveSearchRequest(_query, page, PageSize);
+                var request = new InternetArchiveSearchRequest(_query, page, PageSize, _scope);
                 InternetArchiveSearchPage results =
                     await _client.SearchAsync(request, tokenSource.Token);
 

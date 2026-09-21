@@ -22,15 +22,29 @@ public sealed class CompletedSearch
     /// <summary>The parsed results for this page (identifier-filtered already).</summary>
     public IReadOnlyList<InternetArchiveSearchResult> Results { get; }
 
+    /// <summary>The media-type search scope used for this search.</summary>
+    public SearchScope Scope { get; }
+
     public CompletedSearch(
         string query,
         long numFound,
         int page,
         IReadOnlyList<InternetArchiveSearchResult> results)
+        : this(query, numFound, page, results, SearchScope.Everything)
+    {
+    }
+
+    public CompletedSearch(
+        string query,
+        long numFound,
+        int page,
+        IReadOnlyList<InternetArchiveSearchResult> results,
+        SearchScope scope)
     {
         Query = query;
         NumFound = numFound;
         Page = page;
         Results = results ?? new List<InternetArchiveSearchResult>();
+        Scope = scope;
     }
 }

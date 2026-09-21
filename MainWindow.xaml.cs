@@ -58,6 +58,18 @@ namespace IArchiveMovieBrowser
             ExecuteSearchAsync();
         }
 
+        /// <summary>The currently selected <see cref="SearchScope"/> from the launcher ComboBox.</summary>
+        private SearchScope SelectedScope()
+        {
+            int index = SearchScopeCombo.SelectedIndex;
+            var options = SearchDisplayText.ScopeOptions();
+            if (index >= 0 && index < options.Count)
+            {
+                return options[index];
+            }
+            return SearchScope.WatchableVideo;
+        }
+
         private void OnOpenResultsClick(object sender, RoutedEventArgs e)
         {
             OpenOrUpdateResults();
@@ -96,7 +108,8 @@ namespace IArchiveMovieBrowser
 
             try
             {
-                var request = new InternetArchiveSearchRequest(query, 1, PageSize);
+                SearchScope scope = SelectedScope();
+                var request = new InternetArchiveSearchRequest(query, 1, PageSize, scope);
                 InternetArchiveSearchPage results =
                     await _client.SearchAsync(request, tokenSource.Token);
 
@@ -107,7 +120,7 @@ namespace IArchiveMovieBrowser
 
                 SearchProgress.Visibility = Visibility.Collapsed;
 
-                var completed = new CompletedSearch(query, results.NumFound, 1, results.Results);
+                var completed = new CompletedSearch(query, results.NumFound, 1, results.Results, scope);
                 _latest = completed;
 
                 if (results.Results.Count == 0)
@@ -153,10 +166,11 @@ namespace IArchiveMovieBrowser
         {
             if (_resultsWindow is null)
             {
-                _resultsWindow = new SearchResultsWindow(_client)
-                {
-                    Owner = this
-                };
+                // Deliberately NOT setting Owner: an owned Results window inherits WPF
+                // activation/minimize behavior that drops the launcher to the taskbar when
+                // Results closes. It is an independent top-level window, tracked here so the
+                // launcher still closes it on exit (no orphans).
+                _resultsWindow = new SearchResultsWindow(_client);
                 _resultsWindow.Closed += (sender, e) => _resultsWindow = null;
             }
 

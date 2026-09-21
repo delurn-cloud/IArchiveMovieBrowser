@@ -20,19 +20,43 @@
                    FontSize="13"
                    Margin="0,0,0,4"
                    Foreground="{x:Static SystemColors.ControlTextBrush}"/>
-        <TextBox x:Name="QueryTextBox"
-                 MinHeight="30"
-                 Padding="6,4"
-                 FontSize="14"
-                 VerticalContentAlignment="Center"
-                 AutomationProperties.Name="Search Internet Archive"/>
-        <Button x:Name="SearchButton"
-                Content="Search"
-                Width="96" Height="32"
-                HorizontalAlignment="Left"
-                Margin="0,8,0,0"
-                IsDefault="True"
-                Click="OnSearchClick"/>
+        <Grid Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBox x:Name="QueryTextBox"
+                     Grid.Column="0"
+                     MinHeight="30"
+                     Padding="6,4"
+                     FontSize="14"
+                     VerticalContentAlignment="Center"
+                     AutomationProperties.Name="Search Internet Archive"/>
+            <ComboBox x:Name="SearchScopeCombo"
+                      Grid.Column="1"
+                      Height="30"
+                      Width="172"
+                      Margin="8,0,0,0"
+                      VerticalAlignment="Center"
+                      SelectedIndex="0"
+                      AutomationProperties.Name="Search scope"
+                      AutomationProperties.HelpText="Non-video Internet Archive items matching your search, such as texts, audio, software, or images."
+                      ToolTip="Non-video Internet Archive items matching your search, such as texts, audio, software, or images.">
+                <ComboBoxItem Content="Watchable video"/>
+                <ComboBoxItem Content="Related materials"/>
+                <ComboBoxItem Content="Everything"/>
+            </ComboBox>
+            <Button x:Name="SearchButton"
+                    Grid.Column="2"
+                    Content="Search"
+                    Width="84" Height="32"
+                    Margin="8,0,0,0"
+                    VerticalAlignment="Center"
+                    IsDefault="True"
+                    Click="OnSearchClick"/>
+        </Grid>
 
         <TextBlock Text="Search public Internet Archive movie and video titles."
                    FontSize="12"
