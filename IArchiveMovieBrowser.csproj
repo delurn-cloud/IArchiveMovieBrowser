@@ -8,4 +8,14 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- IArchiveMovieBrowser.Tests is a sibling unit-test project nested under this
+         folder. Keep its sources out of this app's default compile/resource globs. -->
+    <Compile Remove="IArchiveMovieBrowser.Tests\**" />
+    <EmbeddedResource Remove="IArchiveMovieBrowser.Tests\**" />
+    <None Remove="IArchiveMovieBrowser.Tests\**" />
+    <Page Remove="IArchiveMovieBrowser.Tests\**" />
+    <Resource Remove="IArchiveMovieBrowser.Tests\**" />
+  </ItemGroup>
+
 </Project>
