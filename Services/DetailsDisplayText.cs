@@ -315,4 +315,10 @@ public static class DetailsDisplayText
     public static string StatusNoUsableMedia() => "No usable media files found.";
     public static string StatusError(string message) => "Error: " + message;
     public static string StatusCancelled() => "Cancelled";
+
+    // --- Playable video section ---------------------------------------------------
+
+    public static string PlayableVideoHeading() => "Playable video files";
+    public static string NoPlayableVideoMessage() =>
+        "No likely playable video files were identified.";
 }

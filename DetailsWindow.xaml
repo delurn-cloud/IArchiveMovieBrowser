@@ -77,7 +77,39 @@
                                Foreground="{x:Static SystemColors.ControlTextBrush}"/>
                 </Expander>
 
-                <!-- Files section: dominant scrollable inventory -->
+                <!-- Playable video section: prominent, above the full inventory -->
+                <TextBlock x:Name="PlayableHeading"
+                           Text="Playable video files"
+                           FontSize="14" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                <ListView x:Name="PlayableList"
+                          MinHeight="60"
+                          Margin="0,0,0,4"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
+                          BorderThickness="1"
+                          Foreground="{x:Static SystemColors.ControlTextBrush}">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding NameText}" TextWrapping="Wrap" FontSize="12"/>
+                                <TextBlock Grid.Column="1" Text="{Binding SizeText}" FontSize="12" Margin="6,0,0,0"/>
+                                <TextBlock Grid.Column="2" Text="{Binding FormatText}" FontSize="12" Margin="6,0,0,0"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+                <TextBlock x:Name="PlayableEmptyText"
+                           Text="No likely playable video files were identified."
+                           FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"
+                           Visibility="Collapsed"/>
                 <TextBlock Text="Files" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,4"
                            Foreground="{x:Static SystemColors.ControlTextBrush}"/>
                 <ListView x:Name="FilesList"

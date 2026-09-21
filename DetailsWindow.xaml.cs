@@ -109,6 +109,7 @@ namespace IArchiveMovieBrowser
         {
             RefreshDetailsButton.IsEnabled = false;
             DescriptionText.Text = "";
+            SetPlayableSection(null);
             FilesList.ItemsSource = null;
             StatusText.Text = DetailsDisplayText.StatusLoadingDetails();
         }
@@ -125,6 +126,7 @@ namespace IArchiveMovieBrowser
             LicenseText.Text = "License: " + DetailsDisplayText.LicenseText(metadata);
             DescriptionText.Text = DetailsDisplayText.DescriptionText(metadata.Description);
 
+            SetPlayableSection(metadata.Files);
             FilesList.ItemsSource = BuildFileRows(metadata.Files);
 
             RefreshDetailsButton.IsEnabled = true;
@@ -151,6 +153,26 @@ namespace IArchiveMovieBrowser
                     DetailsDisplayText.MediaCandidateText(file)));
             }
             return rows;
+        }
+
+        /// <summary>Populates the "Playable video files" section above the full inventory.</summary>
+        private void SetPlayableSection(IReadOnlyList<InternetArchiveRemoteFile>? files)
+        {
+            IReadOnlyList<InternetArchiveRemoteFile> candidates =
+                PlayableVideoClassifier.SelectPlayableCandidates(files);
+
+            if (candidates.Count == 0)
+            {
+                PlayableList.ItemsSource = null;
+                PlayableList.Visibility = Visibility.Collapsed;
+                PlayableEmptyText.Visibility = Visibility.Visible;
+                PlayableEmptyText.Text = DetailsDisplayText.NoPlayableVideoMessage();
+                return;
+            }
+
+            PlayableList.ItemsSource = BuildFileRows(candidates);
+            PlayableList.Visibility = Visibility.Visible;
+            PlayableEmptyText.Visibility = Visibility.Collapsed;
         }
 
         private void ShowStatus(string text)
