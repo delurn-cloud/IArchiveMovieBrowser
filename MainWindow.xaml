@@ -3,10 +3,107 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:IArchiveMovieBrowser"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="Internet Archive Movie Browser"
+        Width="900" Height="560"
+        MinWidth="720" MinHeight="480"
+        WindowStartupLocation="CenterScreen">
 
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Row 0: search input and actions -->
+        <Grid Grid.Row="0" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBox x:Name="QueryTextBox"
+                     Grid.Column="0"
+                     MinHeight="28"
+                     Padding="6,4"
+                     FontSize="14"
+                     VerticalContentAlignment="Center"
+                     AutomationProperties.Name="Search Internet Archive"/>
+            <Button x:Name="SearchButton"
+                    Grid.Column="1"
+                    Content="Search"
+                    Width="88" Height="30"
+                    Margin="8,0,0,0"
+                    IsDefault="True"
+                    Click="OnSearchClick"/>
+            <Button x:Name="RefreshButton"
+                    Grid.Column="2"
+                    Content="Refresh"
+                    Width="80" Height="30"
+                    Margin="8,0,0,0"
+                    Click="OnRefreshClick"/>
+        </Grid>
+
+        <!-- Row 1: results/page summary + pagination -->
+        <Grid Grid.Row="1" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock x:Name="SummaryText"
+                       Grid.Column="0"
+                       Text=""
+                       FontSize="12"
+                       VerticalAlignment="Center"
+                       Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+            <Button x:Name="PreviousButton"
+                    Grid.Column="1"
+                    Content="Previous"
+                    Width="88" Height="30"
+                    Margin="8,0,0,0"
+                    IsEnabled="False"
+                    Click="OnPreviousClick"/>
+            <Button x:Name="NextButton"
+                    Grid.Column="2"
+                    Content="Next"
+                    Width="72" Height="30"
+                    Margin="8,0,0,0"
+                    IsEnabled="False"
+                    Click="OnNextClick"/>
+        </Grid>
+
+        <!-- Row 2: results (dominant) -->
+        <ListView x:Name="ResultsList"
+                  Grid.Row="2"
+                  Margin="0,0,0,8"
+                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
+                  BorderThickness="1"
+                  Foreground="{x:Static SystemColors.ControlTextBrush}">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}"
+                               TextWrapping="Wrap"
+                               Padding="6,4"
+                               FontSize="13"
+                               Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Row 3: compact text-only status -->
+        <TextBlock x:Name="StatusText"
+                   Grid.Row="3"
+                   Text=""
+                   FontSize="12"
+                   TextWrapping="Wrap"
+                   Foreground="{x:Static SystemColors.ControlTextBrush}"
+                   AutomationProperties.Name="Search status"/>
     </Grid>
 </Window>
