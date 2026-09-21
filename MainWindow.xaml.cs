@@ -36,6 +36,7 @@ namespace IArchiveMovieBrowser
             _client = new InternetArchiveApiClient(_http);
 
             SearchProgress.Visibility = Visibility.Collapsed;
+            ResultStage.Visibility = Visibility.Collapsed;
             StatusText.Text = SearchDisplayText.EmptyQueryText();
             SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
 
@@ -75,6 +76,7 @@ namespace IArchiveMovieBrowser
                 CancelActiveRequest();
                 _generation++;
                 SearchProgress.Visibility = Visibility.Collapsed;
+                ResultStage.Visibility = Visibility.Collapsed;
                 StatusText.Text = SearchDisplayText.EmptyQueryText();
                 SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
                 return;
@@ -88,6 +90,7 @@ namespace IArchiveMovieBrowser
             _active = tokenSource;
 
             SearchProgress.Visibility = Visibility.Visible;
+            ResultStage.Visibility = Visibility.Collapsed;
             StatusText.Text = SearchDisplayText.SearchingText();
             SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
 
@@ -109,12 +112,14 @@ namespace IArchiveMovieBrowser
 
                 if (results.Results.Count == 0)
                 {
-                    StatusText.Text = SearchDisplayText.NoMatchingItemsText();
+                    ResultStageText.Text = SearchDisplayText.NoMatchingItemsText();
+                    ResultStage.Visibility = Visibility.Visible;
                     SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
                     return;
                 }
 
-                StatusText.Text = SearchDisplayText.FoundText(results.NumFound);
+                ResultStageText.Text = SearchDisplayText.FoundText(results.NumFound);
+                ResultStage.Visibility = Visibility.Visible;
                 SetOpenResultsEnabled(results.NumFound);
                 UpdateOpenResultsWindow();
             }
@@ -196,7 +201,8 @@ namespace IArchiveMovieBrowser
         private void ShowError(string message)
         {
             SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
-            StatusText.Text = SearchDisplayText.StatusError(message);
+            ResultStageText.Text = SearchDisplayText.StatusError(message);
+            ResultStage.Visibility = Visibility.Visible;
         }
     }
 }

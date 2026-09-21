@@ -52,12 +52,28 @@
                    Margin="0,8,0,0"
                    Foreground="{x:Static SystemColors.ControlTextBrush}"
                    AutomationProperties.Name="Search status"/>
-        <Button x:Name="OpenResultsButton"
-                Content="No Results"
-                Width="150" Height="32"
-                HorizontalAlignment="Left"
-                Margin="0,12,0,0"
-                IsEnabled="False"
-                Click="OnOpenResultsClick"/>
+
+        <Border x:Name="ResultStage"
+                BorderThickness="1"
+                BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
+                Background="{x:Static SystemColors.ControlBrush}"
+                Padding="8"
+                Margin="0,10,0,0"
+                Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock x:Name="ResultStageText"
+                           Text=""
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,6"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                <Button x:Name="OpenResultsButton"
+                        Content="No Results"
+                        Width="150" Height="32"
+                        HorizontalAlignment="Left"
+                        IsEnabled="False"
+                        Click="OnOpenResultsClick"/>
+            </StackPanel>
+        </Border>
     </StackPanel>
 </Window>
