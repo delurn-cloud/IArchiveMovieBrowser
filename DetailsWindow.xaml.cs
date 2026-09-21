@@ -123,7 +123,7 @@ namespace IArchiveMovieBrowser
             CollectionsText.Text = "Collections: " + DetailsDisplayText.JoinedText(metadata.Collections);
             SubjectsText.Text = "Subjects: " + DetailsDisplayText.JoinedText(metadata.Subjects);
             LicenseText.Text = "License: " + DetailsDisplayText.LicenseText(metadata);
-            DescriptionText.Text = metadata.Description ?? DetailsDisplayText.MissingText;
+            DescriptionText.Text = DetailsDisplayText.DescriptionText(metadata.Description);
 
             FilesList.ItemsSource = BuildFileRows(metadata.Files);
 

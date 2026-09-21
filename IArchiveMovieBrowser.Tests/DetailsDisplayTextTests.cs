@@ -106,6 +106,113 @@ public sealed class DetailsDisplayTextTests
     }
 
     [Fact]
+    public void Description_NullAndBlankFallback()
+    {
+        Assert.Equal("(not supplied)", DetailsDisplayText.DescriptionText(null));
+        Assert.Equal("(not supplied)", DetailsDisplayText.DescriptionText(""));
+        Assert.Equal("(not supplied)", DetailsDisplayText.DescriptionText("   "));
+    }
+
+    [Fact]
+    public void Description_PlainTextNormalized()
+    {
+        Assert.Equal("Simply a plain description.",
+            DetailsDisplayText.DescriptionText("Simply a plain description."));
+        Assert.Equal("Text with many spaces",
+            DetailsDisplayText.DescriptionText("Text     with    many   spaces"));
+    }
+
+    [Fact]
+    public void Description_StructuralNewlines()
+    {
+        Assert.Equal("Line A\nLine B", DetailsDisplayText.DescriptionText("Line A<br />Line B"));
+        Assert.Equal("Line A\nLine B", DetailsDisplayText.DescriptionText("Line A<p>Line B</p>"));
+        Assert.Equal("A\nB\nC", DetailsDisplayText.DescriptionText("A<div>B</div><li>C</li>"));
+        Assert.Equal("Heading\nBody", DetailsDisplayText.DescriptionText("<h2>Heading</h2>Body"));
+    }
+
+    [Fact]
+    public void Description_BoldAndAnchorRemoved_HrefDoesNotLeak()
+    {
+        const string html = "Visit <a href=\"https://example.com/x\">the site</a> now and <b>read this</b>.";
+        const string expected = "Visit the site now and read this.";
+        Assert.Equal(expected, DetailsDisplayText.DescriptionText(html));
+        Assert.DoesNotContain("https://", DetailsDisplayText.DescriptionText(html));
+        Assert.DoesNotContain("example.com", DetailsDisplayText.DescriptionText(html));
+    }
+
+    [Fact]
+    public void Description_CommonNamedEntities()
+    {
+        Assert.Equal("A & B <tag> > up \"quote\" 'apos'",
+            DetailsDisplayText.DescriptionText("A &amp; B &lt;tag&gt; &gt; up &quot;quote&quot; &apos;apos'"));
+    }
+
+    [Fact]
+    public void Description_NumericEntities()
+    {
+        Assert.Equal("Hi\x2019",
+            DetailsDisplayText.DescriptionText("Hi&#8217;"));
+        Assert.Equal("A\x20AC",
+            DetailsDisplayText.DescriptionText("A&#x20AC;"));
+    }
+
+    [Fact]
+    public void Description_EscapedAngleBracketOrdering()
+    {
+        // Real tag stripped first; entity-decode happens after, so literal "<tag>" survives.
+        Assert.Equal("A & B <tag>", DetailsDisplayText.DescriptionText("A &amp; B &lt;tag&gt;"));
+    }
+
+    [Fact]
+    public void Description_NestedMixedMarkup()
+    {
+        const string html =
+            "<div class=\"w\"><p><b>Developed by</b> Adventure International</p></div>" +
+            "<br/>Second paragraph";
+        const string expected =
+            "Developed by Adventure International\nSecond paragraph";
+        Assert.Equal(expected, DetailsDisplayText.DescriptionText(html));
+    }
+
+    [Fact]
+    public void Description_WhitespaceAndBlankLinesNormalized()
+    {
+        const string html = "One<br><br><br>Two";
+        Assert.Equal("One\nTwo", DetailsDisplayText.DescriptionText(html));
+    }
+
+    [Fact]
+    public void Description_CommentsStripped()
+    {
+        const string html = "Before<!-- hidden -->after";
+        Assert.Equal("Before after", DetailsDisplayText.DescriptionText(html));
+    }
+
+    [Fact]
+    public void Description_ScriptStyleBlocksStripped()
+    {
+        const string html = "Hello<script>var x=1;</script>world<style>p{color:red}</style>";
+        Assert.Equal("Hello world", DetailsDisplayText.DescriptionText(html));
+    }
+
+    [Fact]
+    public void Description_BuckarooFragmentLeavesNoMarkup()
+    {
+        const string html =
+            "Adventures of Buckaroo Banzai, The (1985)(Adventure International)<br /><br />" +
+            "<div class=\"mobygames_description\"><p><b>Developed by</b> Adventure International</p></div>";
+        string result = DetailsDisplayText.DescriptionText(html);
+
+        Assert.DoesNotContain("<", result);
+        Assert.DoesNotContain(">", result);
+        Assert.DoesNotContain("href=", result);
+        Assert.DoesNotContain("class=", result);
+        Assert.Contains("Adventures of Buckaroo Banzai", result);
+        Assert.Contains("Developed by", result);
+    }
+
+    [Fact]
     public void Status_TextsAreExact()
     {
         Assert.Equal("Loading details…", DetailsDisplayText.StatusLoadingDetails());
