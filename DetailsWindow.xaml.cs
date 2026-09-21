@@ -31,6 +31,9 @@ namespace IArchiveMovieBrowser
 
             StatusText.Text = DetailsDisplayText.StatusLoadingDetails();
 
+            PlayableList.SelectionChanged += OnPlayableListSelectionChanged;
+            DirectUrlTextBox.Text = PlayableVideoPreview.SelectionPlaceholder();
+
             Closed += (sender, e) =>
             {
                 _closing = true;
@@ -161,6 +164,8 @@ namespace IArchiveMovieBrowser
             IReadOnlyList<InternetArchiveRemoteFile> candidates =
                 PlayableVideoClassifier.SelectPlayableCandidates(files);
 
+            DirectUrlTextBox.Text = PlayableVideoPreview.SelectionPlaceholder();
+
             if (candidates.Count == 0)
             {
                 PlayableList.ItemsSource = null;
@@ -173,6 +178,28 @@ namespace IArchiveMovieBrowser
             PlayableList.ItemsSource = BuildFileRows(candidates);
             PlayableList.Visibility = Visibility.Visible;
             PlayableEmptyText.Visibility = Visibility.Collapsed;
+        }
+
+        private void OnPlayableListSelectionChanged(object sender, EventArgs e)
+        {
+            UpdateDirectUrlPreview();
+        }
+
+        /// <summary>
+        /// Shows the direct IA stream URL for the currently selected playable candidate, or the
+        /// selection placeholder when there is no valid candidate selected.
+        /// </summary>
+        private void UpdateDirectUrlPreview()
+        {
+            Object? selected = PlayableList.SelectedItem;
+            if (selected is null)
+            {
+                DirectUrlTextBox.Text = PlayableVideoPreview.SelectionPlaceholder();
+                return;
+            }
+
+            FileRow row = (FileRow)selected;
+            DirectUrlTextBox.Text = PlayableVideoPreview.Build(_identifier, row.NameText);
         }
 
         private void ShowStatus(string text)

@@ -110,6 +110,18 @@
                            FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
                            Foreground="{x:Static SystemColors.ControlTextBrush}"
                            Visibility="Collapsed"/>
+                <TextBlock Text="Direct stream URL"
+                           FontSize="12" FontWeight="SemiBold" Margin="0,4,0,2"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                <TextBox x:Name="DirectUrlTextBox"
+                         IsReadOnly="True"
+                         FontSize="11"
+                         Text="Select a playable video file to preview its direct stream URL."
+                         TextWrapping="Wrap"
+                         Margin="0,0,0,8"
+                         BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
+                         Background="{x:Static SystemColors.ControlBrush}"
+                         AutomationProperties.Name="Direct stream URL"/>
                 <TextBlock Text="Files" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,4"
                            Foreground="{x:Static SystemColors.ControlTextBrush}"/>
                 <ListView x:Name="FilesList"
