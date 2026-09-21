@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.Net.Http;
 using System.Threading;
 using System.Windows;
@@ -10,9 +9,10 @@ using IArchiveMovieBrowser.Services;
 namespace IArchiveMovieBrowser
 {
     /// <summary>
-    /// Main (and only) screen: a compact text-first Internet Archive search-results pane.
-    /// The UI talks only to <see cref="IInternetArchiveApiClient"/>; it neither parses JSON
-    /// nor builds Internet Archive API URLs.
+    /// Compact search launcher. Owns the single shared <see cref="HttpClient"/> and
+    /// <see cref="IInternetArchiveApiClient"/>, produces <see cref="CompletedSearch"/>
+    /// snapshots, and opens/updates the separate search-results window. It never parses
+    /// JSON or builds Internet Archive URLs itself.
     /// </summary>
     public partial class MainWindow : Window
     {
@@ -20,11 +20,13 @@ namespace IArchiveMovieBrowser
 
         private readonly HttpClient _http;
         private readonly IInternetArchiveApiClient _client;
+        private SearchResultsWindow? _resultsWindow;
 
         private CancellationTokenSource? _active;
         private long _generation;
-        private int _page = 1;
         private bool _closing;
+
+        private CompletedSearch? _latest;
 
         public MainWindow()
         {
@@ -32,41 +34,39 @@ namespace IArchiveMovieBrowser
 
             _http = new HttpClient();
             _client = new InternetArchiveApiClient(_http);
+
+            SearchProgress.Visibility = Visibility.Collapsed;
             StatusText.Text = SearchDisplayText.EmptyQueryText();
+            SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
 
             Closed += (sender, e) =>
             {
                 _closing = true;
                 CancelActiveRequest();
+                if (_resultsWindow is not null)
+                {
+                    _resultsWindow.Close();
+                    _resultsWindow = null;
+                }
                 _http.Dispose();
             };
         }
 
         private void OnSearchClick(object sender, RoutedEventArgs e)
         {
-            ExecuteSearchAsync(1);
+            ExecuteSearchAsync();
         }
 
-        private void OnRefreshClick(object sender, RoutedEventArgs e)
+        private void OnOpenResultsClick(object sender, RoutedEventArgs e)
         {
-            ExecuteSearchAsync(_page);
-        }
-
-        private void OnPreviousClick(object sender, RoutedEventArgs e)
-        {
-            ExecuteSearchAsync(_page - 1);
-        }
-
-        private void OnNextClick(object sender, RoutedEventArgs e)
-        {
-            ExecuteSearchAsync(_page + 1);
+            OpenOrUpdateResults();
         }
 
         /// <summary>
-        /// Runs the current query for the requested page. Blank/whitespace queries never
-        /// issue a network request. A replacement request cancels any prior in-flight one.
+        /// Runs a fresh launcher search at page 1. Blank/whitespace queries never issue a
+        /// request. Each new search cancels any launcher request still in flight.
         /// </summary>
-        private async void ExecuteSearchAsync(int requestedPage)
+        private async void ExecuteSearchAsync()
         {
             string query = QueryTextBox.Text;
 
@@ -74,11 +74,11 @@ namespace IArchiveMovieBrowser
             {
                 CancelActiveRequest();
                 _generation++;
-                ShowEmptyQueryHint();
+                SearchProgress.Visibility = Visibility.Collapsed;
+                StatusText.Text = SearchDisplayText.EmptyQueryText();
+                SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
                 return;
             }
-
-            int page = requestedPage < 1 ? 1 : requestedPage;
 
             CancelActiveRequest();
             _generation++;
@@ -86,42 +86,87 @@ namespace IArchiveMovieBrowser
 
             var tokenSource = new CancellationTokenSource();
             _active = tokenSource;
-            _page = page;
-            ShowLoading();
+
+            SearchProgress.Visibility = Visibility.Visible;
+            StatusText.Text = SearchDisplayText.SearchingText();
+            SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
 
             try
             {
-                var request = new InternetArchiveSearchRequest(query, page, PageSize);
+                var request = new InternetArchiveSearchRequest(query, 1, PageSize);
                 InternetArchiveSearchPage results =
                     await _client.SearchAsync(request, tokenSource.Token);
 
                 if (currentGeneration != _generation || _closing)
                 {
-                    return; // superseded by a newer request, or the window closed
+                    return; // superseded or window closed
                 }
 
-                ShowResults(results, page);
+                SearchProgress.Visibility = Visibility.Collapsed;
+
+                var completed = new CompletedSearch(query, results.NumFound, 1, results.Results);
+                _latest = completed;
+
+                if (results.Results.Count == 0)
+                {
+                    StatusText.Text = SearchDisplayText.NoMatchingItemsText();
+                    SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
+                    return;
+                }
+
+                StatusText.Text = SearchDisplayText.FoundText(results.NumFound);
+                SetOpenResultsEnabled(results.NumFound);
+                UpdateOpenResultsWindow();
             }
             catch (OperationCanceledException)
             {
                 if (currentGeneration == _generation && !_closing)
                 {
-                    ShowStatus(SearchDisplayText.StatusCancelled());
+                    SearchProgress.Visibility = Visibility.Collapsed;
+                    ShowError("Operation cancelled.");
                 }
             }
             catch (InternetArchiveApiException ex)
             {
                 if (currentGeneration == _generation && !_closing)
                 {
-                    ShowStatus(SearchDisplayText.StatusError(ex.Operation + ": " + ex.Message));
+                    SearchProgress.Visibility = Visibility.Collapsed;
+                    ShowError(ex.Operation + ": " + ex.Message);
                 }
             }
             catch (Exception ex)
             {
                 if (currentGeneration == _generation && !_closing)
                 {
-                    ShowStatus(SearchDisplayText.StatusError("Unexpected error: " + ex.Message));
+                    SearchProgress.Visibility = Visibility.Collapsed;
+                    ShowError("Unexpected error: " + ex.Message);
                 }
+            }
+        }
+
+        private void OpenOrUpdateResults()
+        {
+            if (_resultsWindow is null)
+            {
+                _resultsWindow = new SearchResultsWindow(_client)
+                {
+                    Owner = this
+                };
+                _resultsWindow.Closed += (sender, e) => _resultsWindow = null;
+            }
+
+            if (_latest is not null)
+            {
+                _resultsWindow.ApplyCompletedSearch(_latest);
+            }
+            _resultsWindow.Show();
+        }
+
+        private void UpdateOpenResultsWindow()
+        {
+            if (_resultsWindow is not null && _latest is not null)
+            {
+                _resultsWindow.ApplyCompletedSearch(_latest);
             }
         }
 
@@ -136,47 +181,22 @@ namespace IArchiveMovieBrowser
             }
         }
 
-        private void ClearResultsPane()
+        private void SetOpenResultsEnabled(long numFound)
         {
-            ResultsList.ItemsSource = null;
-            SummaryText.Text = "";
-            PreviousButton.IsEnabled = false;
-            NextButton.IsEnabled = false;
+            OpenResultsButton.IsEnabled = true;
+            OpenResultsButton.Content = SearchDisplayText.OpenResultsText(numFound);
         }
 
-        private void ShowLoading()
+        private void SetOpenResultsDisabled(string label)
         {
-            ClearResultsPane();
-            ShowStatus(SearchDisplayText.StatusLoading());
+            OpenResultsButton.IsEnabled = false;
+            OpenResultsButton.Content = label;
         }
 
-        private void ShowEmptyQueryHint()
+        private void ShowError(string message)
         {
-            ClearResultsPane();
-            ShowStatus(SearchDisplayText.EmptyQueryText());
-        }
-
-        private void ShowResults(InternetArchiveSearchPage page, int currentPage)
-        {
-            var lines = new List<string>();
-            foreach (InternetArchiveSearchResult item in page.Results)
-            {
-                lines.Add(SearchDisplayText.RowText(item));
-            }
-
-            ResultsList.ItemsSource = lines;
-            SummaryText.Text = SearchDisplayText.ResultsSummary(page.NumFound, currentPage);
-            PreviousButton.IsEnabled = SearchDisplayText.PreviousEnabled(currentPage);
-            NextButton.IsEnabled = SearchDisplayText.NextEnabled(page.NumFound, currentPage, PageSize);
-
-            ShowStatus(lines.Count == 0
-                ? SearchDisplayText.StatusNoResults()
-                : SearchDisplayText.StatusReady(currentPage));
-        }
-
-        private void ShowStatus(string text)
-        {
-            StatusText.Text = text;
+            SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
+            StatusText.Text = SearchDisplayText.StatusError(message);
         }
     }
 }

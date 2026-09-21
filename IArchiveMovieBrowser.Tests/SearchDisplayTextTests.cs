@@ -95,4 +95,40 @@ public sealed class SearchDisplayTextTests
         Assert.False(SearchDisplayText.NextEnabled(100, 4, 25));
         Assert.False(SearchDisplayText.NextEnabled(0, 1, 25));
     }
+
+    [Fact]
+    public void Launcher_ConstantsAreExact()
+    {
+        Assert.Equal("Search Internet Archive", SearchDisplayText.LauncherTitleText);
+        Assert.Equal(
+            "Search public Internet Archive movie and video titles.",
+            SearchDisplayText.LauncherInstructionText);
+        Assert.Equal("No Results", SearchDisplayText.NoResultsLabelText);
+    }
+
+    [Theory]
+    [InlineData(0, "Open Results (0)")]
+    [InlineData(1, "Open Results (1)")]
+    [InlineData(132, "Open Results (132)")]
+    public void Launcher_OpenResultsLabel(long numFound, string expected)
+    {
+        Assert.Equal(expected, SearchDisplayText.OpenResultsText(numFound));
+    }
+
+    [Fact]
+    public void Launcher_StatusTexts()
+    {
+        Assert.Equal("Searching Internet Archive…", SearchDisplayText.SearchingText());
+        Assert.Equal("Search complete — 132 matching items found.", SearchDisplayText.FoundText(132));
+        Assert.Equal("No matching Internet Archive items found.", SearchDisplayText.NoMatchingItemsText());
+        Assert.Equal("Enter a search term.", SearchDisplayText.EmptyQueryText());
+    }
+
+    [Fact]
+    public void Launcher_QuerySummaryText()
+    {
+        Assert.Equal(
+            "Query: \"buckaroo\" · 128 results · Page 2",
+            SearchDisplayText.QuerySummaryText("buckaroo", 128, 2));
+    }
 }

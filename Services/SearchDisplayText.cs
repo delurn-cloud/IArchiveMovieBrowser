@@ -115,6 +115,28 @@ public static class SearchDisplayText
     public static string StatusError(string message) => "Error: " + message;
     public static string EmptyQueryText() => "Enter a search term.";
 
+    // --- Compact launcher (MainWindow) helpers --------------------------------------
+
+    public const string LauncherTitleText = "Search Internet Archive";
+    public const string LauncherInstructionText =
+        "Search public Internet Archive movie and video titles.";
+
+    public static string SearchingText() => "Searching Internet Archive…";
+
+    public static string FoundText(long numFound) =>
+        "Search complete — " + numFound.ToString() + " matching items found.";
+
+    public static string NoMatchingItemsText() => "No matching Internet Archive items found.";
+
+    public static string OpenResultsText(long numFound) =>
+        "Open Results (" + numFound.ToString() + ")";
+
+    public const string NoResultsLabelText = "No Results";
+
+    /// <summary>The Recent summary line used by the Search Results window.</summary>
+    public static string QuerySummaryText(string query, long numFound, int page) =>
+        "Query: \"" + query + "\"" + Separator + ResultsSummary(numFound, page);
+
     /// <summary>Previous is enabled on any page after the first.</summary>
     public static bool PreviousEnabled(int page) => page > 1;
 

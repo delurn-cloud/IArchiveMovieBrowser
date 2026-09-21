@@ -5,105 +5,59 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Internet Archive Movie Browser"
-        Width="900" Height="560"
-        MinWidth="720" MinHeight="480"
+        Width="560" Height="245"
+        MinWidth="460" MinHeight="210"
         WindowStartupLocation="CenterScreen">
 
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <StackPanel Margin="12">
+        <TextBlock Text="Search Internet Archive"
+                   FontSize="17"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,10"
+                   Foreground="{x:Static SystemColors.ControlTextBrush}"/>
 
-        <!-- Row 0: search input and actions -->
-        <Grid Grid.Row="0" Margin="0,0,0,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+        <TextBlock Text="Search"
+                   FontSize="13"
+                   Margin="0,0,0,4"
+                   Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+        <TextBox x:Name="QueryTextBox"
+                 MinHeight="30"
+                 Padding="6,4"
+                 FontSize="14"
+                 VerticalContentAlignment="Center"
+                 AutomationProperties.Name="Search Internet Archive"/>
+        <Button x:Name="SearchButton"
+                Content="Search"
+                Width="96" Height="32"
+                HorizontalAlignment="Left"
+                Margin="0,8,0,0"
+                IsDefault="True"
+                Click="OnSearchClick"/>
 
-            <TextBox x:Name="QueryTextBox"
-                     Grid.Column="0"
-                     MinHeight="28"
-                     Padding="6,4"
-                     FontSize="14"
-                     VerticalContentAlignment="Center"
-                     AutomationProperties.Name="Search Internet Archive"/>
-            <Button x:Name="SearchButton"
-                    Grid.Column="1"
-                    Content="Search"
-                    Width="88" Height="30"
-                    Margin="8,0,0,0"
-                    IsDefault="True"
-                    Click="OnSearchClick"/>
-            <Button x:Name="RefreshButton"
-                    Grid.Column="2"
-                    Content="Refresh"
-                    Width="80" Height="30"
-                    Margin="8,0,0,0"
-                    Click="OnRefreshClick"/>
-        </Grid>
-
-        <!-- Row 1: results/page summary + pagination -->
-        <Grid Grid.Row="1" Margin="0,0,0,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <TextBlock x:Name="SummaryText"
-                       Grid.Column="0"
-                       Text=""
-                       FontSize="12"
-                       VerticalAlignment="Center"
-                       Foreground="{x:Static SystemColors.ControlTextBrush}"/>
-            <Button x:Name="PreviousButton"
-                    Grid.Column="1"
-                    Content="Previous"
-                    Width="88" Height="30"
-                    Margin="8,0,0,0"
-                    IsEnabled="False"
-                    Click="OnPreviousClick"/>
-            <Button x:Name="NextButton"
-                    Grid.Column="2"
-                    Content="Next"
-                    Width="72" Height="30"
-                    Margin="8,0,0,0"
-                    IsEnabled="False"
-                    Click="OnNextClick"/>
-        </Grid>
-
-        <!-- Row 2: results (dominant) -->
-        <ListView x:Name="ResultsList"
-                  Grid.Row="2"
-                  Margin="0,0,0,8"
-                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                  BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
-                  BorderThickness="1"
-                  Foreground="{x:Static SystemColors.ControlTextBrush}">
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock Text="{Binding}"
-                               TextWrapping="Wrap"
-                               Padding="6,4"
-                               FontSize="13"
-                               Foreground="{x:Static SystemColors.ControlTextBrush}"/>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
-
-        <!-- Row 3: compact text-only status -->
-        <TextBlock x:Name="StatusText"
-                   Grid.Row="3"
-                   Text=""
+        <TextBlock Text="Search public Internet Archive movie and video titles."
                    FontSize="12"
                    TextWrapping="Wrap"
+                   Margin="0,12,0,8"
+                   Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+
+        <ProgressBar x:Name="SearchProgress"
+                     Height="6"
+                     IsIndeterminate="True"
+                     Visibility="Collapsed"
+                     AutomationProperties.Name="Search progress"/>
+        <TextBlock x:Name="StatusText"
+                   Text="Enter a search term."
+                   FontSize="12"
+                   TextWrapping="Wrap"
+                   Margin="0,8,0,0"
                    Foreground="{x:Static SystemColors.ControlTextBrush}"
                    AutomationProperties.Name="Search status"/>
-    </Grid>
+        <Button x:Name="OpenResultsButton"
+                Content="No Results"
+                Width="150" Height="32"
+                HorizontalAlignment="Left"
+                Margin="0,12,0,0"
+                IsEnabled="False"
+                Click="OnOpenResultsClick"/>
+    </StackPanel>
 </Window>
