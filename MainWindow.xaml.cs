@@ -249,7 +249,7 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
                 // activation/minimize behavior that drops the launcher to the taskbar when
                 // Results closes. It is an independent top-level window, tracked here so the
                 // launcher still closes it on exit (no orphans).
-                _resultsWindow = new SearchResultsWindow(_client);
+                _resultsWindow = new SearchResultsWindow(_client, _playerStorage, new ExternalPlayerLauncher());
                 _resultsWindow.Closed += (sender, e) => _resultsWindow = null;
             }
 

@@ -19,6 +19,8 @@ namespace IArchiveMovieBrowser
         private const int PageSize = 25;
 
         private readonly IInternetArchiveApiClient _client;
+        private readonly IPlayerExecutableStorage _playerStorage;
+        private readonly IExternalPlayerLauncher _launcher;
 
         private CancellationTokenSource? _active;
         private long _generation;
@@ -33,10 +35,15 @@ namespace IArchiveMovieBrowser
         private DateTime _lastMouseUpUtc = DateTime.MinValue;
         private static readonly TimeSpan DoubleClickWindow = TimeSpan.FromMilliseconds(500);
 
-        public SearchResultsWindow(IInternetArchiveApiClient client)
+        public SearchResultsWindow(
+            IInternetArchiveApiClient client,
+            IPlayerExecutableStorage playerStorage,
+            IExternalPlayerLauncher launcher)
         {
             InitializeComponent();
             _client = client ?? throw new ArgumentNullException(nameof(client));
+            _playerStorage = playerStorage ?? throw new ArgumentNullException(nameof(playerStorage));
+            _launcher = launcher ?? throw new ArgumentNullException(nameof(launcher));
 
             Closed += (sender, e) =>
             {
@@ -227,7 +234,7 @@ namespace IArchiveMovieBrowser
         {
             if (_detailsWindow is null)
             {
-                _detailsWindow = new DetailsWindow(_client)
+                _detailsWindow = new DetailsWindow(_client, _playerStorage, _launcher)
                 {
                     Owner = this
                 };

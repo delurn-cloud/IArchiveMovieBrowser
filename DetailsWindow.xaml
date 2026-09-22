@@ -122,6 +122,30 @@
                          BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
                          Background="{x:Static SystemColors.ControlBrush}"
                          AutomationProperties.Name="Direct stream URL"/>
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="OpenInPlayerButton"
+                            Grid.Column="0"
+                            Content="Open selected video in external player"
+                            MinWidth="220"
+                            Height="32"
+                            Margin="0,0,8,0"
+                            HorizontalAlignment="Left"
+                            IsEnabled="False"
+                            Click="OnOpenInPlayerClick"
+                            AutomationProperties.Name="Open selected video in external player"/>
+                    <TextBlock x:Name="OpenPlayerStatusText"
+                               Grid.Column="1"
+                               Text="Select a playable video file to open it in the external player."
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center"
+                               Foreground="{x:Static SystemColors.ControlTextBrush}"
+                               AutomationProperties.Name="External player open status"/>
+                </Grid>
                 <TextBlock Text="Files" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,4"
                            Foreground="{x:Static SystemColors.ControlTextBrush}"/>
                 <ListView x:Name="FilesList"

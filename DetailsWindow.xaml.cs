@@ -18,21 +18,29 @@ namespace IArchiveMovieBrowser
     public partial class DetailsWindow : Window
     {
         private readonly IInternetArchiveApiClient _client;
+        private readonly IPlayerExecutableStorage _playerStorage;
+        private readonly IExternalPlayerLauncher _launcher;
 
         private CancellationTokenSource? _active;
         private long _generation;
         private string? _identifier;
         private bool _closing;
 
-        public DetailsWindow(IInternetArchiveApiClient client)
+        public DetailsWindow(
+            IInternetArchiveApiClient client,
+            IPlayerExecutableStorage playerStorage,
+            IExternalPlayerLauncher launcher)
         {
             InitializeComponent();
             _client = client ?? throw new ArgumentNullException(nameof(client));
+            _playerStorage = playerStorage ?? throw new ArgumentNullException(nameof(playerStorage));
+            _launcher = launcher ?? throw new ArgumentNullException(nameof(launcher));
 
             StatusText.Text = DetailsDisplayText.StatusLoadingDetails();
 
             PlayableList.SelectionChanged += OnPlayableListSelectionChanged;
             DirectUrlTextBox.Text = PlayableVideoPreview.SelectionPlaceholder();
+            OpenPlayerStatusText.Text = ExternalPlayerLaunchDisplayText.NoSelectionExplanation;
 
             Closed += (sender, e) =>
             {
@@ -165,6 +173,7 @@ namespace IArchiveMovieBrowser
                 PlayableVideoClassifier.SelectPlayableCandidates(files);
 
             DirectUrlTextBox.Text = PlayableVideoPreview.SelectionPlaceholder();
+            UpdateExternalPlayerButton();
 
             if (candidates.Count == 0)
             {
@@ -187,7 +196,8 @@ namespace IArchiveMovieBrowser
 
         /// <summary>
         /// Shows the direct IA stream URL for the currently selected playable candidate, or the
-        /// selection placeholder when there is no valid candidate selected.
+        /// selection placeholder when there is no valid candidate selected. Also refreshes the
+        /// external-player open button readiness for the current selection.
         /// </summary>
         private void UpdateDirectUrlPreview()
         {
@@ -195,11 +205,79 @@ namespace IArchiveMovieBrowser
             if (selected is null)
             {
                 DirectUrlTextBox.Text = PlayableVideoPreview.SelectionPlaceholder();
+                UpdateExternalPlayerButton();
                 return;
             }
 
             FileRow row = (FileRow)selected;
             DirectUrlTextBox.Text = PlayableVideoPreview.Build(_identifier, row.NameText);
+            UpdateExternalPlayerButton();
+        }
+
+        /// <summary>
+        /// Recomputes whether the currently selected playable candidate can be opened in the
+        /// configured external player (selection + valid player + resolvable direct URL) and
+        /// reflects it on the open button and its nearby status text.
+        /// </summary>
+        private void UpdateExternalPlayerButton()
+        {
+            Object? selected = PlayableList.SelectedItem;
+            string? filename = selected is FileRow row ? row.NameText : null;
+
+            ExternalPlayerLaunchReadiness readiness =
+                ExternalPlayerLaunchLogic.BuildReadiness(_identifier, filename, _playerStorage.Load());
+            ApplyExternalPlayerReadiness(readiness);
+        }
+
+        private void ApplyExternalPlayerReadiness(ExternalPlayerLaunchReadiness readiness)
+        {
+            if (readiness.IsReady)
+            {
+                OpenInPlayerButton.IsEnabled = true;
+                OpenPlayerStatusText.Text = ExternalPlayerLaunchDisplayText.ReadyHint;
+            }
+            else
+            {
+                OpenInPlayerButton.IsEnabled = false;
+                OpenPlayerStatusText.Text =
+                    ExternalPlayerLaunchDisplayText.NotReadyExplanation(readiness.NotReadyReason);
+            }
+        }
+
+        /// <summary>
+        /// Explicit user action: revalidates the selection + configured player, builds the
+        /// canonical direct URL through the shared builder, and starts the configured executable
+        /// exactly once with that URL as a single argument.
+        /// </summary>
+        private void OnOpenInPlayerClick(object sender, RoutedEventArgs e)
+        {
+            Object? selected = PlayableList.SelectedItem;
+            if (selected is not FileRow row)
+            {
+                return;
+            }
+
+            ExternalPlayerLaunchReadiness readiness =
+                ExternalPlayerLaunchLogic.BuildReadiness(_identifier, row.NameText, _playerStorage.Load());
+
+            if (!readiness.IsReady || readiness.Request is null)
+            {
+                ShowStatus(
+                    ExternalPlayerLaunchDisplayText.NotReadyExplanation(readiness.NotReadyReason));
+                ApplyExternalPlayerReadiness(readiness);
+                return;
+            }
+
+            ExternalPlayerLaunchResult result = _launcher.Launch(readiness.Request);
+
+            if (result.Succeeded)
+            {
+                ShowStatus(ExternalPlayerLaunchDisplayText.OpeningStatus);
+            }
+            else
+            {
+                ShowStatus(ExternalPlayerLaunchDisplayText.FailureStatus(result.FailureReason));
+            }
         }
 
         private void ShowStatus(string text)
