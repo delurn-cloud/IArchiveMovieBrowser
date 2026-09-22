@@ -85,7 +85,7 @@ public sealed class InternetArchiveApiClient : IInternetArchiveApiClient
     /// </summary>
     private static Uri BuildSearchUri(InternetArchiveSearchRequest request)
     {
-        string expression = SearchScopeQueryBuilder.BuildQuery(request.Query, request.Scope);
+        string expression = SearchScopeQueryBuilder.BuildQuery(request.Criteria);
         string queryString =
             "q=" + Uri.EscapeDataString(expression) +
             "&output=json" +

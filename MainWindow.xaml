@@ -58,6 +58,53 @@
                     Click="OnSearchClick"/>
         </Grid>
 
+        <Expander x:Name="NarrowResults"
+                  Header="Narrow results"
+                  IsExpanded="False"
+                  Margin="0,0,0,8"
+                  AutomationProperties.Name="Narrow results">
+            <Grid Margin="0,6,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0"
+                           Text="Made by / credited to"
+                           FontSize="12"
+                           Margin="0,0,8,6"
+                           VerticalAlignment="Center"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                <TextBox x:Name="ActorTextBox"
+                         Grid.Row="0" Grid.Column="1"
+                         MinWidth="120"
+                         MinHeight="26"
+                         Padding="6,4"
+                         FontSize="13"
+                         VerticalContentAlignment="Center"
+                         AutomationProperties.Name="Made by / credited to"
+                         AutomationProperties.HelpText="Optionally narrow results by a name or organization in Internet Archive creator metadata, such as a director, producer, studio, uploader, or curator. This does not search actors or cast."/>
+                <TextBlock Grid.Row="1" Grid.Column="0"
+                           Text="Year"
+                           FontSize="12"
+                           Margin="0,6,8,0"
+                           VerticalAlignment="Center"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                <TextBox x:Name="YearTextBox"
+                         Grid.Row="1" Grid.Column="1"
+                         MinWidth="120"
+                         MinHeight="26"
+                         Padding="6,4"
+                         FontSize="13"
+                         VerticalContentAlignment="Center"
+                         AutomationProperties.Name="Year"
+                         AutomationProperties.HelpText="Optional; exactly four digits from 1800 through the current year plus one."/>
+            </Grid>
+        </Expander>
+
         <TextBlock Text="Search public Internet Archive movie and video titles."
                    FontSize="12"
                    TextWrapping="Wrap"

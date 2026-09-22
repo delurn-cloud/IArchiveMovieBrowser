@@ -22,6 +22,9 @@ public sealed class CompletedSearch
     /// <summary>The parsed results for this page (identifier-filtered already).</summary>
     public IReadOnlyList<InternetArchiveSearchResult> Results { get; }
 
+    /// <summary>The structured criteria this search used and reuses on paging/Refresh.</summary>
+    public SearchCriteria Criteria { get; }
+
     /// <summary>The media-type search scope used for this search.</summary>
     public SearchScope Scope { get; }
 
@@ -46,5 +49,24 @@ public sealed class CompletedSearch
         Page = page;
         Results = results ?? new List<InternetArchiveSearchResult>();
         Scope = scope;
+        Criteria = SearchCriteria.TitleOnly(query, scope);
+    }
+
+    public CompletedSearch(
+        SearchCriteria criteria,
+        long numFound,
+        int page,
+        IReadOnlyList<InternetArchiveSearchResult> results)
+    {
+        if (criteria is null)
+        {
+            throw new ArgumentNullException(nameof(criteria));
+        }
+        Criteria = criteria;
+        Query = criteria.Title ?? "";
+        NumFound = numFound;
+        Page = page;
+        Results = results ?? new List<InternetArchiveSearchResult>();
+        Scope = criteria.Scope;
     }
 }

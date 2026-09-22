@@ -155,17 +155,27 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
         }
 
         /// <summary>
-        /// Runs a fresh launcher search at page 1. Blank/whitespace queries never issue a
-        /// request. Each new search cancels any launcher request still in flight.
+        /// Runs a fresh launcher search at page 1. Blank criteria never issue a request. A
+        /// missing criterion set shows the existing prompt; an invalid Year shows clear
+        /// non-modal validation and leaves the entered value visible. Each new search cancels
+        /// any launcher request still in flight.
         /// </summary>
         private async void ExecuteSearchAsync()
         {
-            string query = QueryTextBox.Text;
+            CancelActiveRequest();
+            _generation++;
 
-            if (string.IsNullOrWhiteSpace(query))
+            SearchScope scope = SelectedScope();
+            int currentYear = FilterCriteriaLogic.CurrentYear();
+            CriteriaBuildResult build = FilterCriteriaLogic.BuildCriteria(
+                QueryTextBox.Text,
+                ActorTextBox.Text,
+                YearTextBox.Text,
+                scope,
+                currentYear);
+
+            if (build.State == CriteriaBuildState.NoCriteria)
             {
-                CancelActiveRequest();
-                _generation++;
                 SearchProgress.Visibility = Visibility.Collapsed;
                 ResultStage.Visibility = Visibility.Collapsed;
                 StatusText.Text = SearchDisplayText.EmptyQueryText();
@@ -173,10 +183,16 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
                 return;
             }
 
-            CancelActiveRequest();
-            _generation++;
-            long currentGeneration = _generation;
+            if (build.State == CriteriaBuildState.InvalidYear)
+            {
+                SearchProgress.Visibility = Visibility.Collapsed;
+                ResultStage.Visibility = Visibility.Collapsed;
+                StatusText.Text = build.Message;
+                SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
+                return;
+            }
 
+            long currentGeneration = _generation;
             var tokenSource = new CancellationTokenSource();
             _active = tokenSource;
 
@@ -187,8 +203,7 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
 
             try
             {
-                SearchScope scope = SelectedScope();
-                var request = new InternetArchiveSearchRequest(query, 1, PageSize, scope);
+                var request = new InternetArchiveSearchRequest(build.Criteria!, 1, PageSize);
                 InternetArchiveSearchPage results =
                     await _client.SearchAsync(request, tokenSource.Token);
 
@@ -199,7 +214,7 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
 
                 SearchProgress.Visibility = Visibility.Collapsed;
 
-                var completed = new CompletedSearch(query, results.NumFound, 1, results.Results, scope);
+                var completed = new CompletedSearch(build.Criteria!, results.NumFound, 1, results.Results);
                 _latest = completed;
 
                 if (results.Results.Count == 0)

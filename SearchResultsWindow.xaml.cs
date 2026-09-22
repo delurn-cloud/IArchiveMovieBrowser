@@ -24,10 +24,9 @@ namespace IArchiveMovieBrowser
 
         private CancellationTokenSource? _active;
         private long _generation;
-        private string _query = "";
+        private SearchCriteria _criteria = SearchCriteria.TitleOnly(null, SearchScope.Everything);
         private int _page = 1;
         private long _numFound;
-        private SearchScope _scope = SearchScope.Everything;
         private bool _closing;
 
         private readonly List<string> _pageIdentifiers = new List<string>();
@@ -74,10 +73,9 @@ namespace IArchiveMovieBrowser
 
             CancelActiveRequest();
             _generation++;
-            _query = completedSearch.Query;
+            _criteria = completedSearch.Criteria;
             _page = completedSearch.Page;
             _numFound = completedSearch.NumFound;
-            _scope = completedSearch.Scope;
 
             ShowResults(completedSearch.Results, completedSearch.Page);
         }
@@ -112,7 +110,7 @@ namespace IArchiveMovieBrowser
 
             try
             {
-                var request = new InternetArchiveSearchRequest(_query, page, PageSize, _scope);
+                var request = new InternetArchiveSearchRequest(_criteria, page, PageSize);
                 InternetArchiveSearchPage results =
                     await _client.SearchAsync(request, tokenSource.Token);
 
@@ -161,7 +159,7 @@ namespace IArchiveMovieBrowser
 
         private void ShowLoading(int page)
         {
-            SummaryText.Text = SearchDisplayText.QuerySummaryText(_query, _numFound, page);
+            SummaryText.Text = SearchDisplayText.QuerySummaryText(_criteria, _numFound, page);
             PreviousButton.IsEnabled = SearchDisplayText.PreviousEnabled(page);
             NextButton.IsEnabled = SearchDisplayText.NextEnabled(_numFound, page, PageSize);
             StatusText.Text = SearchDisplayText.StatusLoading();
@@ -178,7 +176,7 @@ namespace IArchiveMovieBrowser
             }
 
             ResultsList.ItemsSource = lines;
-            SummaryText.Text = SearchDisplayText.QuerySummaryText(_query, _numFound, page);
+            SummaryText.Text = SearchDisplayText.QuerySummaryText(_criteria, _numFound, page);
             PreviousButton.IsEnabled = SearchDisplayText.PreviousEnabled(page);
             NextButton.IsEnabled = SearchDisplayText.NextEnabled(_numFound, page, PageSize);
             RefreshButton.IsEnabled = true;

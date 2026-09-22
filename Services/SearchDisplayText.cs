@@ -133,9 +133,43 @@ public static class SearchDisplayText
 
     public const string NoResultsLabelText = "No Results";
 
+    /// <summary>Visible label for the optional creator narrow filter (user-facing wording).</summary>
+    public const string MadeByCreditedToLabel = "Made by / credited to";
+
+    /// <summary>Accessible help text for the creator narrow filter (user-facing wording).</summary>
+    public const string MadeByCreditedToHelp =
+        "Optionally narrow results by a name or organization in Internet Archive creator metadata, " +
+        "such as a director, producer, studio, uploader, or curator. This does not search actors or cast.";
+
     /// <summary>The Recent summary line used by the Search Results window.</summary>
     public static string QuerySummaryText(string query, long numFound, int page) =>
         "Query: \"" + query + "\"" + Separator + ResultsSummary(numFound, page);
+
+    /// <summary>
+    /// Summary line for a completed search built from structured criteria. For a title search it
+    /// matches the legacy format exactly; for actor-only/year-only searches it shows a concise
+    /// description of the applied criteria instead of an empty title label.
+    /// </summary>
+    public static string QuerySummaryText(SearchCriteria criteria, long numFound, int page)
+    {
+        if (!string.IsNullOrWhiteSpace(criteria.Title))
+        {
+            return QuerySummaryText(criteria.Title!, numFound, page);
+        }
+
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(criteria.Creator))
+        {
+            parts.Add("creator \"" + criteria.Creator!.Trim() + "\"");
+        }
+        if (criteria.Year is not null)
+        {
+            parts.Add("year " + criteria.Year.ToString());
+        }
+
+        string label = parts.Count == 0 ? "criteria" : string.Join(", ", parts);
+        return "Query: " + label + Separator + ResultsSummary(numFound, page);
+    }
 
     // --- Search scope selection (launcher) ----------------------------------------
 
