@@ -50,7 +50,7 @@ public sealed class InternetArchiveApiClientTests
         Assert.Contains("&page=1", query);
         Assert.Contains("&rows=25", query);
         Assert.Contains("&fl=" + Uri.EscapeDataString("identifier,title,creator,date,year,mediatype,collection,downloads"), query);
-        Assert.Contains("q=" + Uri.EscapeDataString("title:(buckaroo bonsai)"), query);
+        Assert.Contains("q=" + Uri.EscapeDataString("title:\"buckaroo bonsai\""), query);
     }
 
     [Fact]

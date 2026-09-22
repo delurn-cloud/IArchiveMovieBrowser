@@ -12,9 +12,9 @@ namespace IArchiveMovieBrowser.Tests;
 public sealed class SearchScopeTests
 {
     [Theory]
-    [InlineData(SearchScope.Everything, "title:(buckaroo)")]
-    [InlineData(SearchScope.WatchableVideo, "title:(buckaroo) AND mediatype:movies")]
-    [InlineData(SearchScope.RelatedMaterials, "title:(buckaroo) AND NOT mediatype:movies")]
+    [InlineData(SearchScope.Everything, "title:\"buckaroo\"")]
+    [InlineData(SearchScope.WatchableVideo, "title:\"buckaroo\" AND mediatype:movies")]
+    [InlineData(SearchScope.RelatedMaterials, "title:\"buckaroo\" AND NOT mediatype:movies")]
     public void BuildQuery_MapsEachScope(SearchScope scope, string expected)
     {
         Assert.Equal(expected, SearchScopeQueryBuilder.BuildQuery("buckaroo", scope));
@@ -23,19 +23,19 @@ public sealed class SearchScopeTests
     [Fact]
     public void BuildQuery_KeepsUserTermsEscapeConvention()
     {
-        // Same title:(...) shape plus the media restriction; whole expression is escaped
+        // Same quoted-phrase shape plus the media restriction; whole expression is escaped
         // downstream just like the pre-scope query.
         Assert.Equal(
-            "title:(buckaroo bonsai) AND mediatype:movies",
+            "title:\"buckaroo bonsai\" AND mediatype:movies",
             SearchScopeQueryBuilder.BuildQuery("buckaroo bonsai", SearchScope.WatchableVideo));
     }
 
     [Theory]
-    [InlineData(SearchScope.Everything, "q=title%3A%28buckaroo%29")]
-    [InlineData(SearchScope.WatchableVideo, "q=title%3A%28buckaroo%29%20AND%20mediatype%3Amovies")]
+    [InlineData(SearchScope.Everything, "q=title%3A%22buckaroo%22")]
+    [InlineData(SearchScope.WatchableVideo, "q=title%3A%22buckaroo%22%20AND%20mediatype%3Amovies")]
     [InlineData(
         SearchScope.RelatedMaterials,
-        "q=title%3A%28buckaroo%29%20AND%20NOT%20mediatype%3Amovies")]
+        "q=title%3A%22buckaroo%22%20AND%20NOT%20mediatype%3Amovies")]
     public async Task Client_EncodesScopedQuery(SearchScope scope, string expectedQFragment)
     {
         const string json = "{\"response\":{\"numFound\":1,\"docs\":[{\"identifier\":\"id\"}]}}";
