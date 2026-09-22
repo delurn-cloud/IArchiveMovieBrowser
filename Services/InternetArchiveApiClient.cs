@@ -250,6 +250,192 @@ public sealed class InternetArchiveApiClient : IInternetArchiveApiClient
         }
     }
 /// <summary>
+/// <inheritdoc />
+    public async Task<VideoDownloadResult> DownloadFileAsync(
+        VideoDownloadRequest request,
+        DownloadProgressListener? reportProgress,
+        CancellationToken cancellationToken = default)
+    {
+        if (request is null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        string finalPath = request.FinalPath;
+
+        // Preflight: destination exists without explicit replace auth -> no request/no transfer.
+        if (System.IO.File.Exists(finalPath) && !request.ReplaceConfirmed)
+        {
+            return VideoDownloadResult.DestinationExists();
+        }
+
+        string tempPath = Downloads.TempSiblingPath(finalPath);
+        string? backupPath = null;
+
+        try
+        {
+            HttpRequestMessage requestMsg = new HttpRequestMessage();
+            requestMsg.RequestUri = request.SourceUri;
+            HttpResponseMessage? response = null;
+            try
+            {
+                response = await _httpClient.SendAsync(
+                    requestMsg,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+
+                Uri? finalUri = response.RequestMessage?.RequestUri;
+                System.Net.HttpStatusCode status = response.StatusCode;
+
+                if (!PlayerUrlResolver.IsTrustedFinalUri(finalUri))
+                {
+                    return VideoDownloadResult.UnsafeFinal(finalUri);
+                }
+                if (status == System.Net.HttpStatusCode.Unauthorized
+                    || status == System.Net.HttpStatusCode.Forbidden)
+                {
+                    return VideoDownloadResult.Restricted();
+                }
+                if (status == System.Net.HttpStatusCode.NotFound)
+                {
+                    return VideoDownloadResult.Missing();
+                }
+                int code = (int)status;
+                if (code < 200 || code >= 300)
+                {
+                    return VideoDownloadResult.NonSuccess(status);
+                }
+
+                string? contentType = response.Content.Headers.ContentType is null
+                    ? null
+                    : response.Content.Headers.ContentType.ToString();
+                if (IsClearlyNonMedia(contentType))
+                {
+                    return VideoDownloadResult.NonMedia();
+                }
+
+                long? total = response.Content.Headers.ContentLength;
+
+                // Stream to a sibling temporary file before any finalization.
+                System.IO.FileStream? output = null;
+                System.IO.Stream? inbound = null;
+                try
+                {
+                    output = System.IO.File.Open(tempPath, System.IO.FileMode.CreateNew, System.IO.FileAccess.Write);
+                    inbound = await response.Content.ReadAsStreamAsync(cancellationToken);
+
+                    var buffer = new byte[128 * 1024];
+                    long written = 0;
+                    while (true)
+                    {
+                        int count = await inbound.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+                        if (count <= 0)
+                        {
+                            break;
+                        }
+                        await output.WriteAsync(buffer, 0, count, cancellationToken);
+                        written += count;
+                        if (reportProgress is not null)
+                        {
+                            reportProgress.OnProgress(new DownloadProgress(written, total));
+                        }
+                    }
+                }
+                finally
+                {
+                    if (inbound is not null)
+                    {
+                        try { inbound.Close(); } catch (Exception) { }
+                    }
+                    if (output is not null)
+                    {
+                        try { output.Close(); } catch (Exception) { }
+                    }
+                }
+// Finalize only after a complete, successfully closed temporary transfer.
+                try
+                {
+                    if (System.IO.File.Exists(finalPath))
+                    {
+                        backupPath = Downloads.BackupSiblingPath(finalPath);
+                        System.IO.File.Replace(tempPath, finalPath, backupPath);
+                        DeleteIfExists(backupPath); // replacement succeeded; drop old backup file
+                    }
+                    else
+                    {
+                        System.IO.File.Move(tempPath, finalPath);
+                    }
+                    return VideoDownloadResult.Completed();
+                }
+                catch (Exception replaceError)
+                {
+                    // Final target is untouched (atomic Replace/Move); clean the new temp + any backup.
+                    DeleteIfExists(tempPath);
+                    if (backupPath is not null)
+                    {
+                        DeleteIfExists(backupPath);
+                    }
+                    return VideoDownloadResult.FileSystemFailure(replaceError);
+                }
+            }
+            finally
+            {
+                if (response is not null)
+                {
+                    response.Dispose();
+                }
+                requestMsg.Dispose();
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            DeleteIfExists(tempPath);
+            if (backupPath is not null)
+            {
+                DeleteIfExists(backupPath);
+            }
+            return VideoDownloadResult.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            DeleteIfExists(tempPath);
+            if (backupPath is not null)
+            {
+                DeleteIfExists(backupPath);
+            }
+            return VideoDownloadResult.NetworkFailure(ex);
+        }
+    }
+
+    /// <summary>True when a 2xx Content-Type is clearly non-media/error-like; absent/generic is not rejected.</summary>
+    private static bool IsClearlyNonMedia(string? contentType)
+    {
+        if (string.IsNullOrWhiteSpace(contentType))
+        {
+            return false;
+        }
+        string lower = contentType.ToLower();
+        return lower.StartsWith("text/")
+            || lower.Contains("html")
+            || lower == "application/json"
+            || lower == "application/xml"
+            || lower == "text/xml";
+    }
+
+    private static void DeleteIfExists(string path)
+    {
+        try
+        {
+            if (System.IO.File.Exists(path))
+            {
+                System.IO.File.Delete(path);
+            }
+        }
+        catch (Exception)
+        {
+            // best effort
+        }
+    }
     /// Builds the advancedsearch.php request URI. Query shape (documented): a simple
     /// title search over the user-provided text, scoped by media-type:
     ///   q=&lt;SearchScopeQueryBuilder expression&gt;&amp;rows=&lt;page size&gt;&amp;page=&lt;page&gt;

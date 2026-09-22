@@ -205,6 +205,41 @@
                 <Grid Margin="0,0,0,4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="DownloadVideoButton"
+                            Grid.Column="0"
+                            Content="Download selected video…"
+                            MinWidth="220"
+                            Height="30"
+                            Margin="0,0,8,0"
+                            HorizontalAlignment="Left"
+                            IsEnabled="False"
+                            Click="OnDownloadClick"
+                            AutomationProperties.Name="Download selected video"/>
+                    <Button x:Name="CancelDownloadButton"
+                            Grid.Column="1"
+                            Content="Cancel download"
+                            MinWidth="130"
+                            Height="30"
+                            Margin="0,0,8,0"
+                            IsEnabled="False"
+                            Visibility="Collapsed"
+                            Click="OnCancelDownloadClick"
+                            AutomationProperties.Name="Cancel download"/>
+                    <TextBlock x:Name="DownloadStatusText"
+                               Grid.Column="2"
+                               Text=""
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center"
+                               Foreground="{x:Static SystemColors.ControlTextBrush}"
+                               AutomationProperties.Name="Download status"/>
+                </Grid>
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Button x:Name="CheckLinkButton"

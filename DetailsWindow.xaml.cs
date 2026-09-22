@@ -36,6 +36,10 @@ namespace IArchiveMovieBrowser
         private long _playerResolveGeneration;
         private bool _playerResolveActive;
 
+        private CancellationTokenSource? _downloadCts;
+        private long _downloadGeneration;
+        private bool _downloadActive;
+
         public DetailsWindow(
             IInternetArchiveApiClient client,
             IPlayerExecutableStorage playerStorage,
@@ -58,6 +62,7 @@ namespace IArchiveMovieBrowser
                 CancelActiveRequest();
                 InvalidateLinkCheck();
                 InvalidatePlayerResolve();
+                InvalidateDownload();
             };
         }
 
@@ -72,6 +77,7 @@ namespace IArchiveMovieBrowser
             CancelActiveRequest();
             InvalidateLinkCheck();
             InvalidatePlayerResolve();
+            InvalidateDownload();
             _generation++;
             long currentGeneration = _generation;
 
@@ -225,6 +231,7 @@ namespace IArchiveMovieBrowser
                 DirectUrlTextBox.Text = PlayableVideoPreview.SelectionPlaceholder();
                 UpdateExternalPlayerButton();
                 UpdateLinkCheckButton();
+                UpdateDownloadButton();
                 return;
             }
 
@@ -232,6 +239,7 @@ namespace IArchiveMovieBrowser
             DirectUrlTextBox.Text = PlayableVideoPreview.Build(_identifier, row.NameText);
             UpdateExternalPlayerButton();
             UpdateLinkCheckButton();
+            UpdateDownloadButton();
         }
 
         /// <summary>
@@ -524,6 +532,196 @@ namespace IArchiveMovieBrowser
             ClearResolvedPlayerUrl();
         }
 
+// --- Selected-video download ----------------------------------------------------------
+
+        private void UpdateDownloadButton()
+        {
+            bool usable = !_downloadActive && SelectedDirectUri() is not null;
+            DownloadVideoButton.IsEnabled = usable;
+        }
+
+        private void OnDownloadClick(object sender, RoutedEventArgs e)
+        {
+            if (_downloadActive)
+            {
+                return; // duplicate prevention
+            }
+
+            Object? selected = PlayableList.SelectedItem;
+            if (selected is not FileRow row)
+            {
+                UpdateDownloadStatus(Downloads.NoSelectionText);
+                return;
+            }
+
+            Uri? canonical = SelectedDirectUri();
+            if (canonical is null)
+            {
+                UpdateDownloadStatus(Downloads.NoSelectionText);
+                return;
+            }
+
+            if (Downloads.IsUnsafeRawFileName(row.NameText))
+            {
+                UpdateDownloadStatus(Downloads.NoSelectionText);
+                return;
+            }
+
+            string? suggestedName = Downloads.SuggestedFileName(row.NameText);
+            if (suggestedName is null)
+            {
+                UpdateDownloadStatus(Downloads.FileSystemFailureText);
+                return;
+            }
+
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Save video",
+                FileName = suggestedName,
+                Filter = Downloads.SaveDialogFilter,
+                OverwritePrompt = false // the app's Replace/Cancel confirmation controls overwrite
+            };
+            if (dialog.ShowDialog(this) != true)
+            {
+                return; // Save dialog cancelled: no request, no error
+            }
+
+            string finalPath = dialog.FileName;
+            if (string.IsNullOrWhiteSpace(finalPath))
+            {
+                return;
+            }
+
+            bool replacing = System.IO.File.Exists(finalPath);
+            if (replacing && !ConfirmReplace())
+            {
+                return; // user chose the safe default (no overwrite): no request, no change
+            }
+
+            _downloadActive = true;
+            _downloadGeneration++;
+            long generation = _downloadGeneration;
+            UpdateDownloadButton();
+            CancelDownloadButton.Visibility = Visibility.Visible;
+            CancelDownloadButton.IsEnabled = true;
+            UpdateDownloadStatus(Downloads.PreparingText);
+
+            CancelAndDisposeDownloadCts();
+            _downloadCts = new CancellationTokenSource();
+            CancellationToken token = _downloadCts.Token;
+
+            var request = new VideoDownloadRequest(canonical, finalPath, replacing);
+            _ = RunDownloadAsync(request, generation, token);
+        }
+
+        /// <summary>
+        /// Modal Replace/Cancel confirmation. Only an explicit <c>Yes</c> authorizes replacement.
+        /// The safe non-overwrite outcome (<c>No</c>) is the default/focused button; dialog close,
+        /// Escape, and any other result also mean no request and no overwrite. The stock WPF
+        /// MessageBox uses its standard Yes/No captions (no package/custom dialog added).
+        /// </summary>
+        private bool ConfirmReplace()
+        {
+            System.Windows.MessageBoxResult choice = System.Windows.MessageBox.Show(
+                this,
+                Downloads.ReplacePromptText,
+                "Internet Archive Movie Browser",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning,
+                System.Windows.MessageBoxResult.No);
+            Downloads.OverwriteDecision decision =
+                choice == System.Windows.MessageBoxResult.Yes
+                    ? Downloads.OverwriteDecision.Authorize
+                    : Downloads.OverwriteDecision.Deny;
+            return Downloads.ShouldReplace(decision);
+        }
+
+        private void OnCancelDownloadClick(object sender, RoutedEventArgs e)
+        {
+            CancelAndDisposeDownloadCts();
+        }
+private async Task RunDownloadAsync(
+            VideoDownloadRequest request,
+            long generation,
+            CancellationToken token)
+        {
+            VideoDownloadResult result = await _client.DownloadFileAsync(
+                request,
+                new DownloadProgressReporter(this, generation),
+                token);
+
+            if (_closing || generation != _downloadGeneration)
+            {
+                CompleteDownload();
+                return;
+            }
+
+            UpdateDownloadStatus(Downloads.OutcomeText(result));
+            CompleteDownload();
+        }
+
+        private void CompleteDownload()
+        {
+            _downloadActive = false;
+            CancelAndDisposeDownloadCts();
+            CancelDownloadButton.Visibility = Visibility.Collapsed;
+            CancelDownloadButton.IsEnabled = false;
+            UpdateDownloadButton();
+        }
+
+        private void InvalidateDownload()
+        {
+            _downloadGeneration++;
+            _downloadActive = false;
+            CancelAndDisposeDownloadCts();
+        }
+
+        private void CancelAndDisposeDownloadCts()
+        {
+            if (_downloadCts is not null)
+            {
+                _downloadCts.Cancel();
+                _downloadCts.Dispose();
+                _downloadCts = null;
+            }
+        }
+
+        private void UpdateDownloadStatus(string text)
+        {
+            DownloadStatusText.Text = text;
+        }
+
+        /// <summary>Progress listener that funnels throttled progress to the Details window.</summary>
+        private sealed class DownloadProgressReporter : DownloadProgressListener
+        {
+            private readonly DetailsWindow _window;
+            private readonly long _generation;
+            private DateTime _lastVisibleUpdate = DateTime.MinValue;
+            private static readonly TimeSpan UiThrottle = TimeSpan.FromMilliseconds(150);
+
+            public DownloadProgressReporter(DetailsWindow window, long generation)
+            {
+                _window = window;
+                _generation = generation;
+            }
+
+            public void OnProgress(DownloadProgress progress)
+            {
+                if (_window._closing || _generation != _window._downloadGeneration)
+                {
+                    return;
+                }
+                bool complete = progress.HasKnownTotal
+                    && progress.BytesDownloaded >= (progress.TotalBytes.HasValue ? progress.TotalBytes.Value : 0L);
+                DateTime nowUtc = DateTime.UtcNow;
+                if (!complete && (nowUtc - _lastVisibleUpdate) < UiThrottle)
+                {
+                    return; // throttle visible updates; the final outcome text follows completion anyway
+                }
+                _lastVisibleUpdate = nowUtc;
+                _window.UpdateDownloadStatus(Downloads.ProgressText(progress));
+            }
+        }
         private void ShowStatus(string text)
         {
             StatusText.Text = text;

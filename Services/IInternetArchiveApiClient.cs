@@ -49,4 +49,15 @@ public interface IInternetArchiveApiClient
     Task<PlayerResolutionResult> ResolvePlayerUrlAsync(
         Uri canonicalUri,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Downloads one selected, validated Internet Archive video file: resolves via the handler's
+    /// normal redirects (header-only until trusted), streams to a sibling temporary file, and
+    /// finalizes into the destination only after a complete, safe transfer. Never throws for
+    /// ordinary transfer outcomes; cancellation is classified as Cancelled.
+    /// </summary>
+    Task<VideoDownloadResult> DownloadFileAsync(
+        VideoDownloadRequest request,
+        DownloadProgressListener? reportProgress,
+        CancellationToken cancellationToken = default);
 }
