@@ -33,7 +33,20 @@
                      Padding="6,4"
                      FontSize="14"
                      VerticalContentAlignment="Center"
-                     AutomationProperties.Name="Search Internet Archive"/>
+                     AutomationProperties.Name="Search Internet Archive"
+                     AutomationProperties.HelpText="Searches titles as the phrase you enter.
+
+You can enter part of a title to discover likely matches, then search again using a full title for more precise results.">
+                <TextBox.ToolTip>
+                    <ToolTip MaxWidth="380">
+                        <TextBlock MaxWidth="380"
+                                   TextWrapping="Wrap"
+                                   Text="Searches titles as the phrase you enter.
+
+You can enter part of a title to discover likely matches, then search again using a full title for more precise results."/>
+                    </ToolTip>
+                </TextBox.ToolTip>
+            </TextBox>
             <ComboBox x:Name="SearchScopeCombo"
                       Grid.Column="1"
                       Height="30"
@@ -42,8 +55,14 @@
                       VerticalAlignment="Center"
                       SelectedIndex="0"
                       AutomationProperties.Name="Search scope"
-                      AutomationProperties.HelpText="Non-video Internet Archive items matching your search, such as texts, audio, software, or images."
-                      ToolTip="Non-video Internet Archive items matching your search, such as texts, audio, software, or images.">
+                      AutomationProperties.HelpText="Non-video Internet Archive items matching your search, such as texts, audio, software, or images.">
+                <ComboBox.ToolTip>
+                    <ToolTip MaxWidth="380">
+                        <TextBlock MaxWidth="380"
+                                   TextWrapping="Wrap"
+                                   Text="Non-video Internet Archive items matching your search, such as texts, audio, software, or images."/>
+                    </ToolTip>
+                </ComboBox.ToolTip>
                 <ComboBoxItem Content="Watchable video"/>
                 <ComboBoxItem Content="Related materials"/>
                 <ComboBoxItem Content="Everything"/>

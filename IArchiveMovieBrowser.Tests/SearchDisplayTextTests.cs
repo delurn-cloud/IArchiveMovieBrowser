@@ -131,4 +131,26 @@ public sealed class SearchDisplayTextTests
             "Query: \"buckaroo\" · 128 results · Page 2",
             SearchDisplayText.QuerySummaryText("buckaroo", 128, 2));
     }
+[Fact]
+    public void Launcher_SearchHelpText_IsExactWording()
+    {
+        Assert.Equal(
+            "Searches titles as the phrase you enter.\n\n" +
+            "You can enter part of a title to discover likely matches, then search again using a full title for more precise results.",
+            SearchDisplayText.SearchHelpText);
+
+        // The blank line between paragraphs is preserved.
+        Assert.Contains("\n\n", SearchDisplayText.SearchHelpText);
+        Assert.StartsWith("Searches titles as the phrase you enter.", SearchDisplayText.SearchHelpText);
+        Assert.EndsWith("for more precise results.", SearchDisplayText.SearchHelpText);
+
+        // Guidance must not expose raw IA/Lucene query syntax and must not claim exact matching
+        // for partial searches (it correctly says "likely matches").
+        Assert.DoesNotContain("title:", SearchDisplayText.SearchHelpText);
+        Assert.DoesNotContain("Lucene", SearchDisplayText.SearchHelpText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("query", SearchDisplayText.SearchHelpText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("likely matches", SearchDisplayText.SearchHelpText);
+        Assert.DoesNotContain("exact", SearchDisplayText.SearchHelpText, StringComparison.OrdinalIgnoreCase);
+    }
+
 }

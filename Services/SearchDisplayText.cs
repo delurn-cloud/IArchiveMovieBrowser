@@ -208,6 +208,14 @@ public static class SearchDisplayText
     public const string RelatedMaterialsTooltip =
         "Non-video Internet Archive items matching your search, such as texts, audio, software, or images.";
 
+    /// <summary>
+    /// Supplemental guidance for the launcher's primary Title/Search box: describes the
+    /// discover-and-refine workflow without exposing raw IA/Lucene query syntax.
+    /// </summary>
+    public const string SearchHelpText =
+        "Searches titles as the phrase you enter.\n\n" +
+        "You can enter part of a title to discover likely matches, then search again using a full title for more precise results.";
+
     /// <summary>Human-readable label for a scope, matching the launcher ComboBox items.</summary>
     public static string ScopeLabel(SearchScope scope)
     {
