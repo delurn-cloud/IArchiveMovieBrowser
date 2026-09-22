@@ -63,7 +63,48 @@
                                Margin="0,0,0,2" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
                 </StackPanel>
 
-                <!-- Description: expanded but bounded via an Expander -->
+                <!-- Item image preview (Internet Archive) -->
+                <Border x:Name="DetailsImagePanel"
+                        BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
+                        BorderThickness="1"
+                        Background="{x:Static SystemColors.ControlBrush}"
+                        Padding="8"
+                        Margin="0,0,0,10"
+                        MaxWidth="260"
+                        HorizontalAlignment="Left"
+                        MinHeight="120">
+                    <Grid>
+                        <TextBlock x:Name="DetailsPreviewStatusText"
+                                   Text="Loading Internet Archive image…"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{x:Static SystemColors.ControlTextBrush}"
+                                   AutomationProperties.Name="Item image preview"/>
+                        <Image x:Name="DetailsPreviewImage"
+                               Stretch="Uniform"
+                               MaxWidth="240"
+                               MaxHeight="300"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Top"
+                               Margin="0,4"
+                               Visibility="Collapsed"
+                               AutomationProperties.Name="Item image"/>
+                        <StackPanel x:Name="DetailsPreviewFallback"
+                                    Visibility="Collapsed"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Center">
+                            <TextBlock Text="No Internet Archive image available"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       Foreground="{x:Static SystemColors.GrayTextBrush}"
+                                       AutomationProperties.Name="No Internet Archive image is available for the selected item."/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
                 <Expander x:Name="DescriptionExpander"
                           Header="Description"
                           IsExpanded="True"

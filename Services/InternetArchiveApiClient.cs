@@ -76,6 +76,43 @@ public sealed class InternetArchiveApiClient : IInternetArchiveApiClient
         return ParseItemMetadata(json, uri, safeIdentifier);
     }
 
+    /// <inheritdoc />
+    public async Task<byte[]?> GetImageBytesAsync(
+        string identifier,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(identifier))
+        {
+            return null;
+        }
+
+        string safeIdentifier = ValidateIdentifier(identifier);
+        string? url = InternetArchiveImagePreview.BuildImageUrl(safeIdentifier);
+        if (url is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            using HttpResponseMessage response =
+                await _httpClient.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+            return await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return null; // cancelled/closed: suppressed by the caller's generation guard
+        }
+        catch (Exception)
+        {
+            return null; // any fetch failure → unavailable; no unobserved exception
+        }
+    }
+
     /// <summary>
     /// Builds the advancedsearch.php request URI. Query shape (documented): a simple
     /// title search over the user-provided text, scoped by media-type:

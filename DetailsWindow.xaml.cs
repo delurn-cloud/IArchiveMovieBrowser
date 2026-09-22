@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using IArchiveMovieBrowser.Domain;
 using IArchiveMovieBrowser.Services;
 
@@ -67,6 +69,7 @@ namespace IArchiveMovieBrowser
             ShowLoading();
 
             _ = FetchAsync(identifier, tokenSource, currentGeneration);
+            _ = FetchImageAsync(identifier, tokenSource, currentGeneration);
         }
 
         private void OnRefreshDetailsClick(object sender, RoutedEventArgs e)
@@ -123,6 +126,7 @@ namespace IArchiveMovieBrowser
             SetPlayableSection(null);
             FilesList.ItemsSource = null;
             StatusText.Text = DetailsDisplayText.StatusLoadingDetails();
+            ShowDetailsPreviewLoading();
         }
 
         private void ShowMetadata(InternetArchiveItemMetadata metadata)
@@ -283,6 +287,109 @@ namespace IArchiveMovieBrowser
         private void ShowStatus(string text)
         {
             StatusText.Text = text;
+        }
+
+// --- Item image preview (reuses the shared metadata token/generation lifetime) ------
+
+        private async Task FetchImageAsync(
+            string identifier,
+            CancellationTokenSource tokenSource,
+            long currentGeneration)
+        {
+            if (InternetArchiveImagePreview.BuildImageUrl(identifier) is null)
+            {
+                ShowDetailsPreviewUnavailable();
+                return;
+            }
+
+            byte[]? bytes = null;
+            try
+            {
+                bytes = await _client.GetImageBytesAsync(identifier, tokenSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return; // closed or superseded; no late update
+            }
+            catch (Exception)
+            {
+                bytes = null;
+            }
+
+            if (currentGeneration != _generation || _closing)
+            {
+                return; // superseded or window closed
+            }
+
+            if (bytes is null || bytes.Length == 0)
+            {
+                ShowDetailsPreviewUnavailable();
+                return;
+            }
+
+            BitmapImage? image = DecodeImage(bytes);
+            if (currentGeneration != _generation || _closing)
+            {
+                return;
+            }
+
+            if (image is null)
+            {
+                ShowDetailsPreviewUnavailable();
+                return;
+            }
+
+            ShowDetailsPreviewLoaded(image);
+        }
+
+        private BitmapImage? DecodeImage(byte[] bytes)
+        {
+            try
+            {
+                BitmapImage image = new BitmapImage();
+                using (MemoryStream stream = new MemoryStream(bytes, writable: false))
+                {
+                    image.BeginInit();
+                    image.CacheOption = BitmapCacheOption.OnLoad; // release stream after init
+                    image.StreamSource = stream;
+                    image.EndInit();
+                }
+                image.Freeze();
+                return image;
+            }
+            catch (Exception)
+            {
+                return null; // not a usable image / decode failure
+            }
+        }
+
+        private void ShowDetailsPreviewLoading()
+        {
+            DetailsPreviewStatusText.Text = InternetArchiveImagePreview.LoadingMessage;
+            DetailsPreviewStatusText.Visibility = Visibility.Visible;
+            DetailsPreviewImage.Source = null;
+            DetailsPreviewImage.Visibility = Visibility.Collapsed;
+            DetailsPreviewFallback.Visibility = Visibility.Collapsed;
+        }
+
+        private void ShowDetailsPreviewLoaded(BitmapImage image)
+        {
+            string accessible = InternetArchiveImagePreview.LoadedImageAccessibleText(TitleText.Text);
+            DetailsPreviewImage.Source = image;
+            DetailsPreviewImage.Visibility = Visibility.Visible;
+            DetailsPreviewImage.ToolTip = accessible;
+            System.Windows.Automation.AutomationProperties.SetName(DetailsPreviewImage, accessible);
+
+            DetailsPreviewStatusText.Visibility = Visibility.Collapsed;
+            DetailsPreviewFallback.Visibility = Visibility.Collapsed;
+        }
+
+        private void ShowDetailsPreviewUnavailable()
+        {
+            DetailsPreviewImage.Source = null;
+            DetailsPreviewImage.Visibility = Visibility.Collapsed;
+            DetailsPreviewStatusText.Visibility = Visibility.Collapsed;
+            DetailsPreviewFallback.Visibility = Visibility.Visible;
         }
 
         private void CancelActiveRequest()

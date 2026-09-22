@@ -22,4 +22,13 @@ public interface IInternetArchiveApiClient
     Task<InternetArchiveItemMetadata> GetItemMetadataAsync(
         string identifier,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fetches the raw bytes of the Internet Archive image for an item, or null when the request
+    /// fails, is cancelled, or is not an image. Never throws; cancellation/closure is surfaced as
+    /// null so a stale/closed selection is suppressed rather than crashing.
+    /// </summary>
+    Task<byte[]?> GetImageBytesAsync(
+        string identifier,
+        CancellationToken cancellationToken = default);
 }
