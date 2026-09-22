@@ -31,4 +31,22 @@ public interface IInternetArchiveApiClient
     Task<byte[]?> GetImageBytesAsync(
         string identifier,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Issues a read-only probe (response headers only; body never downloaded) against a direct
+    /// Internet Archive video URL and returns its HTTP characteristics. Never throws; a transport
+    /// failure is surfaced as a network-failed probe.
+    /// </summary>
+    Task<DirectLinkProbe> ProbeVideoLinkAsync(
+        Uri directUri,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resolves a canonical Internet Archive video URL through the handler's normal redirect
+    /// behavior (header-only; body never read) and returns a structured trusted/decision result.
+    /// Never throws; cancellation is classified as Cancelled, transport failures as NetworkFailure.
+    /// </summary>
+    Task<PlayerResolutionResult> ResolvePlayerUrlAsync(
+        Uri canonicalUri,
+        CancellationToken cancellationToken = default);
 }

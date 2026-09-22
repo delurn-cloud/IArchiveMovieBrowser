@@ -28,6 +28,14 @@ namespace IArchiveMovieBrowser
         private string? _identifier;
         private bool _closing;
 
+        private CancellationTokenSource? _linkProbeCts;
+        private long _linkProbeGeneration;
+        private bool _linkProbeActive;
+
+        private CancellationTokenSource? _playerResolveCts;
+        private long _playerResolveGeneration;
+        private bool _playerResolveActive;
+
         public DetailsWindow(
             IInternetArchiveApiClient client,
             IPlayerExecutableStorage playerStorage,
@@ -48,6 +56,8 @@ namespace IArchiveMovieBrowser
             {
                 _closing = true;
                 CancelActiveRequest();
+                InvalidateLinkCheck();
+                InvalidatePlayerResolve();
             };
         }
 
@@ -60,6 +70,8 @@ namespace IArchiveMovieBrowser
             _identifier = identifier;
 
             CancelActiveRequest();
+            InvalidateLinkCheck();
+            InvalidatePlayerResolve();
             _generation++;
             long currentGeneration = _generation;
 
@@ -205,17 +217,21 @@ namespace IArchiveMovieBrowser
         /// </summary>
         private void UpdateDirectUrlPreview()
         {
+            ResetLinkCheckDisplay();
+
             Object? selected = PlayableList.SelectedItem;
             if (selected is null)
             {
                 DirectUrlTextBox.Text = PlayableVideoPreview.SelectionPlaceholder();
                 UpdateExternalPlayerButton();
+                UpdateLinkCheckButton();
                 return;
             }
 
             FileRow row = (FileRow)selected;
             DirectUrlTextBox.Text = PlayableVideoPreview.Build(_identifier, row.NameText);
             UpdateExternalPlayerButton();
+            UpdateLinkCheckButton();
         }
 
         /// <summary>
@@ -235,7 +251,7 @@ namespace IArchiveMovieBrowser
 
         private void ApplyExternalPlayerReadiness(ExternalPlayerLaunchReadiness readiness)
         {
-            if (readiness.IsReady)
+            if (readiness.IsReady && !_playerResolveActive)
             {
                 OpenInPlayerButton.IsEnabled = true;
                 OpenPlayerStatusText.Text = ExternalPlayerLaunchDisplayText.ReadyHint;
@@ -249,39 +265,263 @@ namespace IArchiveMovieBrowser
         }
 
         /// <summary>
-        /// Explicit user action: revalidates the selection + configured player, builds the
-        /// canonical direct URL through the shared builder, and starts the configured executable
-        /// exactly once with that URL as a single argument.
+        /// Explicit user action: resolve the selected file's canonical IA URL through redirects,
+        /// validate the trusted final URI, and then start the configured external player with that
+        /// final URI as exactly one argument. Resolution is header-only (body never read).
         /// </summary>
         private void OnOpenInPlayerClick(object sender, RoutedEventArgs e)
         {
+            if (_playerResolveActive)
+            {
+                return; // duplicate prevention while resolving/launching
+            }
+
             Object? selected = PlayableList.SelectedItem;
             if (selected is not FileRow row)
             {
+                ShowStatus(ExternalPlayerLaunchDisplayText.NoSelectionExplanation);
+                return;
+            }
+
+            Uri? canonical = SelectedDirectUri();
+            if (canonical is null)
+            {
+                ShowStatus(ExternalPlayerLaunchDisplayText.NotReadyExplanation(
+                    ExternalPlayerLaunchNotReadyReason.NoDirectUrl));
                 return;
             }
 
             ExternalPlayerLaunchReadiness readiness =
                 ExternalPlayerLaunchLogic.BuildReadiness(_identifier, row.NameText, _playerStorage.Load());
-
             if (!readiness.IsReady || readiness.Request is null)
             {
-                ShowStatus(
-                    ExternalPlayerLaunchDisplayText.NotReadyExplanation(readiness.NotReadyReason));
+                ShowStatus(ExternalPlayerLaunchDisplayText.NotReadyExplanation(readiness.NotReadyReason));
                 ApplyExternalPlayerReadiness(readiness);
                 return;
             }
 
-            ExternalPlayerLaunchResult result = _launcher.Launch(readiness.Request);
+            _playerResolveActive = true;
+            _playerResolveGeneration++;
+            long generation = _playerResolveGeneration;
+            ApplyExternalPlayerReadiness(readiness); // disables the button while resolving
+            ClearResolvedPlayerUrl();
+            ShowPlayerResolveStatus(PlayerResolveDisplayText.ResolvingText);
 
-            if (result.Succeeded)
+            CancelAndDisposePlayerResolveCts();
+            _playerResolveCts = new CancellationTokenSource();
+            CancellationToken token = _playerResolveCts.Token;
+
+            _ = RunResolveAndLaunchAsync(canonical, readiness.Request.ExecutablePath, generation, token);
+        }
+
+        private async Task RunResolveAndLaunchAsync(
+            Uri canonical,
+            string executablePath,
+            long generation,
+            CancellationToken token)
+        {
+            PlayerResolutionResult result = await _client.ResolvePlayerUrlAsync(canonical, token);
+
+            if (_closing || generation != _playerResolveGeneration)
             {
-                ShowStatus(ExternalPlayerLaunchDisplayText.OpeningStatus);
+                return; // cancelled/stale: never launch and never touch the UI late
             }
-            else
+
+            if (result.Outcome != PlayerResolutionOutcome.Resolved)
             {
-                ShowStatus(ExternalPlayerLaunchDisplayText.FailureStatus(result.FailureReason));
+                ShowPlayerResolveStatus(PlayerResolveDisplayText.OutcomeText(result));
+                CompletePlayerResolve();
+                return;
             }
+
+            ExternalPlayerLaunchRequest? launch =
+                PlayerResolveThenLaunchLogic.BuildLaunchRequest(result, executablePath);
+            if (launch is null)
+            {
+                ShowPlayerResolveStatus(PlayerResolveDisplayText.UnsafeFinalText);
+                CompletePlayerResolve();
+                return;
+            }
+
+            SetResolvedPlayerUrl(result.FinalUri);
+            ExternalPlayerLaunchResult outcome = _launcher.Launch(launch);
+
+            string status = outcome.Succeeded
+                ? ExternalPlayerLaunchDisplayText.OpeningStatus
+                : ExternalPlayerLaunchDisplayText.FailureStatus(outcome.FailureReason);
+            ShowPlayerResolveStatus(status);
+            ShowStatus(status);
+
+            CompletePlayerResolve();
+        }
+
+        private void CompletePlayerResolve()
+        {
+            _playerResolveActive = false;
+            CancelAndDisposePlayerResolveCts();
+            UpdateExternalPlayerButton();
+        }
+
+        private void InvalidatePlayerResolve()
+        {
+            _playerResolveGeneration++;
+            _playerResolveActive = false;
+            CancelAndDisposePlayerResolveCts();
+            ClearResolvedPlayerUrl();
+        }
+
+        private void CancelAndDisposePlayerResolveCts()
+        {
+            if (_playerResolveCts is not null)
+            {
+                _playerResolveCts.Cancel();
+                _playerResolveCts.Dispose();
+                _playerResolveCts = null;
+            }
+        }
+
+        private void ShowPlayerResolveStatus(string text)
+        {
+            OpenPlayerStatusText.Text = text;
+        }
+
+        private void SetResolvedPlayerUrl(Uri? finalUri)
+        {
+            if (ResolvedPlayerUrlTextBox is not null && finalUri is not null)
+            {
+                ResolvedPlayerUrlTextBox.Text = finalUri.AbsoluteUri;
+                ResolvedPlayerUrlTextBox.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void ClearResolvedPlayerUrl()
+        {
+            if (ResolvedPlayerUrlTextBox is not null)
+            {
+                ResolvedPlayerUrlTextBox.Text = "";
+                ResolvedPlayerUrlTextBox.Visibility = Visibility.Collapsed;
+            }
+        }
+
+// --- Selected-video-link diagnostic -------------------------------------------------
+
+        /// <summary>
+        /// Resolves the canonical trusted HTTPS IA download URI for the currently selected playable
+        /// file, or null when there is no selection or the direct URL is not resolvable/trusted.
+        /// </summary>
+        private Uri? SelectedDirectUri()
+        {
+            Object? selected = PlayableList.SelectedItem;
+            if (selected is not FileRow row)
+            {
+                return null;
+            }
+            try
+            {
+                return InternetArchiveDownloadUrlBuilder.BuildDownloadUri(_identifier, row.NameText);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+            catch (InvalidOperationException)
+            {
+                return null;
+            }
+        }
+
+        private void UpdateLinkCheckButton()
+        {
+            CheckLinkButton.IsEnabled = !_linkProbeActive && SelectedDirectUri() is not null;
+        }
+
+        private void OnCheckLinkClick(object sender, RoutedEventArgs e)
+        {
+            if (_linkProbeActive)
+            {
+                return;
+            }
+
+            Uri? uri = SelectedDirectUri();
+            if (uri is null)
+            {
+                ShowCheckStatus(DirectLinkDiagnosticText.NoSelectionText);
+                return;
+            }
+
+            _linkProbeActive = true;
+            _linkProbeGeneration++;
+            long generation = _linkProbeGeneration;
+            UpdateLinkCheckButton();
+            DirectLinkSummaryTextBox.Visibility = Visibility.Collapsed;
+            ShowCheckStatus(DirectLinkDiagnosticText.CheckingText);
+
+            CancelAndDisposeLinkProbeCts();
+            _linkProbeCts = new CancellationTokenSource();
+            CancellationToken token = _linkProbeCts.Token;
+
+            _ = RunLinkCheckAsync(uri, generation, token);
+        }
+
+        private async Task RunLinkCheckAsync(Uri uri, long generation, CancellationToken token)
+        {
+            DirectLinkProbe result = await _client.ProbeVideoLinkAsync(uri, token);
+
+            if (_closing || generation != _linkProbeGeneration)
+            {
+                return; // stale/closed: a newer check or window close owns the UI state
+            }
+
+            ApplyLinkCheckResult(result);
+            CompleteLinkCheck();
+        }
+
+        private void ApplyLinkCheckResult(DirectLinkProbe result)
+        {
+            ShowCheckStatus(DirectLinkDiagnosticText.OutcomeText(result));
+            string summary = DirectLinkDiagnosticText.SummaryText(result);
+            if (summary.Length > 0)
+            {
+                DirectLinkSummaryTextBox.Text = summary;
+                DirectLinkSummaryTextBox.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void ShowCheckStatus(string text)
+        {
+            CheckLinkStatusText.Text = text;
+        }
+
+        private void CompleteLinkCheck()
+        {
+            _linkProbeActive = false;
+            CancelAndDisposeLinkProbeCts();
+            UpdateLinkCheckButton();
+        }
+
+        private void InvalidateLinkCheck()
+        {
+            _linkProbeGeneration++;
+            _linkProbeActive = false;
+            CancelAndDisposeLinkProbeCts();
+        }
+
+        private void CancelAndDisposeLinkProbeCts()
+        {
+            if (_linkProbeCts is not null)
+            {
+                _linkProbeCts.Cancel();
+                _linkProbeCts.Dispose();
+                _linkProbeCts = null;
+            }
+        }
+
+        private void ResetLinkCheckDisplay()
+        {
+            CheckLinkStatusText.Text = "";
+            DirectLinkSummaryTextBox.Text = "";
+            DirectLinkSummaryTextBox.Visibility = Visibility.Collapsed;
+            ClearResolvedPlayerUrl();
         }
 
         private void ShowStatus(string text)

@@ -187,6 +187,55 @@
                                Foreground="{x:Static SystemColors.ControlTextBrush}"
                                AutomationProperties.Name="External player open status"/>
                 </Grid>
+                <StackPanel Margin="0,0,0,6">
+                    <TextBlock Text="Resolved player URL"
+                               FontSize="12"
+                               Margin="0,0,0,2"
+                               Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                    <TextBox x:Name="ResolvedPlayerUrlTextBox"
+                             IsReadOnly="True"
+                             FontSize="11"
+                             TextWrapping="Wrap"
+                             Margin="0,0,0,0"
+                             BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
+                             Background="{x:Static SystemColors.ControlBrush}"
+                             Visibility="Collapsed"
+                             AutomationProperties.Name="Resolved player URL"/>
+                </StackPanel>
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="CheckLinkButton"
+                            Grid.Column="0"
+                            Content="Check selected video link"
+                            MinWidth="200"
+                            Height="30"
+                            Margin="0,0,8,0"
+                            HorizontalAlignment="Left"
+                            IsEnabled="False"
+                            Click="OnCheckLinkClick"
+                            AutomationProperties.Name="Check selected video link"/>
+                    <TextBlock x:Name="CheckLinkStatusText"
+                               Grid.Column="1"
+                               Text=""
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center"
+                               Foreground="{x:Static SystemColors.ControlTextBrush}"
+                               AutomationProperties.Name="Selected video link check status"/>
+                </Grid>
+                <TextBox x:Name="DirectLinkSummaryTextBox"
+                         IsReadOnly="True"
+                         FontSize="11"
+                         TextWrapping="Wrap"
+                         MinHeight="54"
+                         Margin="0,0,0,8"
+                         BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
+                         Background="{x:Static SystemColors.ControlBrush}"
+                         Visibility="Collapsed"
+                         AutomationProperties.Name="Selected video link diagnostic summary"/>
                 <TextBlock Text="Files" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,4"
                            Foreground="{x:Static SystemColors.ControlTextBrush}"/>
                 <ListView x:Name="FilesList"

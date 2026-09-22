@@ -113,7 +113,143 @@ public sealed class InternetArchiveApiClient : IInternetArchiveApiClient
         }
     }
 
-    /// <summary>
+    /// <inheritdoc />
+    public async Task<DirectLinkProbe> ProbeVideoLinkAsync(
+        Uri directUri,
+        CancellationToken cancellationToken = default)
+    {
+        if (directUri is null)
+        {
+            return DirectLinkProbe.NetworkError(null);
+        }
+
+        try
+        {
+            // Explicitly header-first: we request only the response headers and never read the
+            // response body (no ReadAs*/CopyTo*). Both request and response are disposed after the
+            // metadata is captured.
+            HttpRequestMessage request = new HttpRequestMessage();
+            request.RequestUri = directUri;
+            HttpResponseMessage? response = null;
+            try
+            {
+                response = await _httpClient.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+
+                Uri? finalUri = response.RequestMessage?.RequestUri;
+                string? contentType = response.Content.Headers.ContentType is null
+                    ? null
+                    : response.Content.Headers.ContentType.ToString();
+                long? contentLength = response.Content.Headers.ContentLength;
+                string? disposition = response.Content.Headers.ContentDisposition is null
+                    ? null
+                    : response.Content.Headers.ContentDisposition.ToString();
+
+                return DirectLinkProbe.FromResponse(
+                    directUri,
+                    finalUri,
+                    response.StatusCode,
+                    response.ReasonPhrase,
+                    contentType,
+                    contentLength,
+                    disposition);
+            }
+            finally
+            {
+                if (response is not null)
+                {
+                    response.Dispose();
+                }
+                request.Dispose();
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return DirectLinkProbe.Cancelled(directUri);
+        }
+        catch (Exception)
+        {
+            return DirectLinkProbe.NetworkError(directUri);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<PlayerResolutionResult> ResolvePlayerUrlAsync(
+        Uri canonicalUri,
+        CancellationToken cancellationToken = default)
+    {
+        if (canonicalUri is null)
+        {
+            return PlayerResolutionResult.UnsafeFinal(null);
+        }
+
+        // The source must already be a trusted canonical IA download URL before we send anything.
+        Uri source = canonicalUri;
+        if (source.AbsolutePath is null || !source.AbsolutePath.StartsWith("/download/"))
+        {
+            return PlayerResolutionResult.UnsafeFinal(source);
+        }
+
+        try
+        {
+            HttpRequestMessage request = new HttpRequestMessage();
+            request.RequestUri = source;
+            HttpResponseMessage? response = null;
+            try
+            {
+                response = await _httpClient.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+
+                // Never read/copy the response body — only headers and the final URI.
+                Uri? finalUri = response.RequestMessage?.RequestUri;
+                System.Net.HttpStatusCode status = response.StatusCode;
+
+                if (status == System.Net.HttpStatusCode.Unauthorized
+                    || status == System.Net.HttpStatusCode.Forbidden)
+                {
+                    return PlayerResolutionResult.Restricted();
+                }
+                if (status == System.Net.HttpStatusCode.NotFound)
+                {
+                    return PlayerResolutionResult.Missing();
+                }
+
+                int code = (int)status;
+                if (code < 200 || code >= 300)
+                {
+                    return PlayerResolutionResult.NonSuccess(status);
+                }
+
+                if (finalUri is null || !PlayerUrlResolver.IsTrustedFinalUri(finalUri))
+                {
+                    return PlayerResolutionResult.UnsafeFinal(finalUri);
+                }
+
+                return PlayerResolutionResult.Resolved(finalUri);
+            }
+            finally
+            {
+                if (response is not null)
+                {
+                    response.Dispose();
+                }
+                request.Dispose();
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return PlayerResolutionResult.Cancelled();
+        }
+        catch (Exception)
+        {
+            return PlayerResolutionResult.NetworkFailure();
+        }
+    }
+/// <summary>
     /// Builds the advancedsearch.php request URI. Query shape (documented): a simple
     /// title search over the user-provided text, scoped by media-type:
     ///   q=&lt;SearchScopeQueryBuilder expression&gt;&amp;rows=&lt;page size&gt;&amp;page=&lt;page&gt;
