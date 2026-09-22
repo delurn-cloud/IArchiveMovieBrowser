@@ -41,8 +41,11 @@ public enum CriteriaBuildState
     /// <summary>No title, creator, or year supplied: no search should start.</summary>
     NoCriteria,
 
-    /// <summary>The Year field failed validation; <see cref="CriteriaBuildResult.Message"/> explains it.</summary>
+    /// <summary>A Year endpoint failed validation; <see cref="CriteriaBuildResult.Message"/> explains it.</summary>
     InvalidYear,
+
+    /// <summary>Both Year endpoints are valid but ordered From &gt; To; no search should start.</summary>
+    InvalidYearRange,
 
     /// <summary>A valid <see cref="SearchCriteria"/> is available.</summary>
     Valid
@@ -70,14 +73,17 @@ public sealed class CriteriaBuildResult
     internal static CriteriaBuildResult InvalidYear(string message)
         => new CriteriaBuildResult(CriteriaBuildState.InvalidYear, null, message);
 
+    internal static CriteriaBuildResult InvalidYearRange(string message)
+        => new CriteriaBuildResult(CriteriaBuildState.InvalidYearRange, null, message);
+
     internal static CriteriaBuildResult Valid(SearchCriteria criteria)
         => new CriteriaBuildResult(CriteriaBuildState.Valid, criteria, null);
 }
 
 /// <summary>
 /// Pure, WPF-independent validation and normalized criteria construction for optional
-/// Actor / creator and Year filters. Year validation takes an explicit current year so tests do
-/// not depend on the real calendar date.
+/// Made-by/credited-to (creator) and Year range filters. Year validation takes an explicit current
+/// year so tests do not depend on the real calendar date.
 /// </summary>
 public static class FilterCriteriaLogic
 {
@@ -94,6 +100,9 @@ public static class FilterCriteriaLogic
     /// Maximum accepted year for a given current year: the current year plus one (inclusive).
     /// </summary>
     public static int MaxYear(int currentYear) => currentYear + 1;
+
+    /// <summary>User-facing message when the Year-from endpoint is later than the Year-to endpoint.</summary>
+    public const string YearRangeOrderMessage = "Year from must be earlier than or equal to Year to.";
 
     /// <summary>
     /// Validates an optional Year input. Accepts exactly four ASCII digits in the inclusive range
@@ -147,24 +156,44 @@ public static class FilterCriteriaLogic
 
     /// <summary>
     /// Builds validated <see cref="SearchCriteria"/> from the launcher fields. Returns
-    /// <see cref="CriteriaBuildState.NoCriteria"/> when everything is blank, or
-    /// <see cref="CriteriaBuildState.InvalidYear"/> (with a clear message) when the Year is bad.
-    /// Never throws on user input.
+    /// <see cref="CriteriaBuildState.NoCriteria"/> when everything is blank, or an invalid state
+    /// (with a clear message) when a Year endpoint is malformed or the range is reversed. Never
+    /// throws on user input and always preserves the entered values for UI correction.
     /// </summary>
     public static CriteriaBuildResult BuildCriteria(
         string? title,
         string? creator,
-        string? yearText,
+        string? yearFromText,
+        string? yearToText,
         SearchScope scope,
         int currentYear)
     {
-        YearValidation year = ValidateYear(yearText, currentYear);
-        if (year.State == YearValidationState.Invalid)
+        YearValidation from = ValidateYear(yearFromText, currentYear);
+        if (from.State == YearValidationState.Invalid)
         {
             return CriteriaBuildResult.InvalidYear(InvalidYearMessage(currentYear));
         }
 
-        SearchCriteria criteria = SearchCriteria.Validated(title, creator, year.Value, scope);
+        YearValidation to = ValidateYear(yearToText, currentYear);
+        if (to.State == YearValidationState.Invalid)
+        {
+            return CriteriaBuildResult.InvalidYear(InvalidYearMessage(currentYear));
+        }
+
+        if (from.State == YearValidationState.Valid
+            && to.State == YearValidationState.Valid
+            && from.Value > to.Value)
+        {
+            return CriteriaBuildResult.InvalidYearRange(YearRangeOrderMessage);
+        }
+
+        SearchCriteria criteria = SearchCriteria.Validated(
+            title,
+            creator,
+            from.Value,
+            to.Value,
+            currentYear,
+            scope);
         if (!criteria.HasAnyCriterion)
         {
             return CriteriaBuildResult.NoCriteria();

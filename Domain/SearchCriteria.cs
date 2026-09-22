@@ -2,10 +2,11 @@ namespace IArchiveMovieBrowser.Domain;
 
 /// <summary>
 /// Immutable, validated search criteria for an Internet Archive search: an optional title
-/// phrase, an optional actor/creator phrase, an optional exact year, and the media-type
-/// <see cref="SearchScope"/>. At least one of title / actor-creator / year is required before a
-/// live search is issued. Instances are produced by the centralized validation/query logic and
-/// carried unchanged through the launcher, completed-search state, and paging/Refresh.
+/// phrase, an optional actor/creator phrase, an optional inclusive year range, and the
+/// media-type <see cref="SearchScope"/>. At least one of title / actor-creator / year-from /
+/// year-to is required before a live search is issued. Instances are produced by the centralized
+/// validation/query logic and carried unchanged through the launcher, completed-search state, and
+/// paging/Refresh.
 /// </summary>
 public sealed class SearchCriteria
 {
@@ -15,27 +16,47 @@ public sealed class SearchCriteria
     /// <summary>Trimmed literal actor/creator phrase, or null when absent.</summary>
     public string? Creator { get; }
 
-    /// <summary>Validated exact year filter, or null when absent.</summary>
-    public int? Year { get; }
+    /// <summary>Validated inclusive lower year bound, or null when absent.</summary>
+    public int? YearFrom { get; }
+
+    /// <summary>Validated inclusive upper year bound, or null when absent.</summary>
+    public int? YearTo { get; }
+
+    /// <summary>
+    /// The validated maximum accepted year (current year + 1) at criteria-construction time.
+    /// Used to complete a from-only range query. Null when no year endpoint is present.
+    /// </summary>
+    public int? YearMax { get; }
 
     /// <summary>The media-type restriction to apply.</summary>
     public SearchScope Scope { get; }
 
     /// <summary>
-    /// True when at least one of title / actor-creator / year is present, i.e. a search can run.
+    /// True when at least one of title / actor-creator / year-from / year-to is present, i.e. a
+    /// search can run.
     /// </summary>
     public bool HasAnyCriterion { get; }
+
+    /// <summary>
+    /// True when both year endpoints are present and equal: the historical exact-year case.
+    /// </summary>
+    public bool IsExactYear =>
+        YearFrom is not null && YearTo is not null && YearFrom == YearTo;
 
     private SearchCriteria(
         string? title,
         string? creator,
-        int? year,
+        int? yearFrom,
+        int? yearTo,
+        int? yearMax,
         SearchScope scope,
         bool hasAnyCriterion)
     {
         Title = title;
         Creator = creator;
-        Year = year;
+        YearFrom = yearFrom;
+        YearTo = yearTo;
+        YearMax = yearMax;
         Scope = scope;
         HasAnyCriterion = hasAnyCriterion;
     }
@@ -52,30 +73,39 @@ public sealed class SearchCriteria
             hasAny ? trimmed : null,
             null,
             null,
+            null,
+            null,
             scope,
             hasAny);
     }
 
     /// <summary>
-    /// Builds a criteria from already-validated fields. The caller is responsible for deciding
-    /// validity; this normalizes whitespace and recomputes <see cref="HasAnyCriterion"/>.
+    /// Builds a criteria from already-validated fields (including the current-year-based maximum
+    /// bound). The caller is responsible for deciding validity; this normalizes whitespace and
+    /// recomputes <see cref="HasAnyCriterion"/>.
     /// </summary>
     public static SearchCriteria Validated(
         string? title,
         string? creator,
-        int? year,
+        int? yearFrom,
+        int? yearTo,
+        int currentYear,
         SearchScope scope)
     {
         string trimmedTitle = string.IsNullOrWhiteSpace(title) ? "" : title!.Trim();
         string trimmedCreator = string.IsNullOrWhiteSpace(creator) ? "" : creator!.Trim();
+        bool hasYear = yearFrom is not null || yearTo is not null;
         bool hasAny = !string.IsNullOrWhiteSpace(trimmedTitle)
             || !string.IsNullOrWhiteSpace(trimmedCreator)
-            || year is not null;
+            || hasYear;
 
+        int? yearMax = hasYear ? currentYear + 1 : null;
         return new SearchCriteria(
             string.IsNullOrWhiteSpace(trimmedTitle) ? null : trimmedTitle,
             string.IsNullOrWhiteSpace(trimmedCreator) ? null : trimmedCreator,
-            year,
+            yearFrom,
+            yearTo,
+            yearMax,
             scope,
             hasAny);
     }

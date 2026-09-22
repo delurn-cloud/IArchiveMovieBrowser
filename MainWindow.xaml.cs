@@ -170,7 +170,8 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
             CriteriaBuildResult build = FilterCriteriaLogic.BuildCriteria(
                 QueryTextBox.Text,
                 ActorTextBox.Text,
-                YearTextBox.Text,
+                YearFromTextBox.Text,
+                YearToTextBox.Text,
                 scope,
                 currentYear);
 
@@ -183,7 +184,7 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
                 return;
             }
 
-            if (build.State == CriteriaBuildState.InvalidYear)
+            if (!build.IsValid)
             {
                 SearchProgress.Visibility = Visibility.Collapsed;
                 ResultStage.Visibility = Visibility.Collapsed;

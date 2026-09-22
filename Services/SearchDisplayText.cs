@@ -162,13 +162,40 @@ public static class SearchDisplayText
         {
             parts.Add("creator \"" + criteria.Creator!.Trim() + "\"");
         }
-        if (criteria.Year is not null)
+        string yearSummary = YearSummary(criteria);
+        if (yearSummary.Length > 0)
         {
-            parts.Add("year " + criteria.Year.ToString());
+            parts.Add(yearSummary);
         }
 
         string label = parts.Count == 0 ? "criteria" : string.Join(", ", parts);
         return "Query: " + label + Separator + ResultsSummary(numFound, page);
+    }
+
+    /// <summary>
+    /// Concise human summary of the year range for the Results query line: exact endpoints read
+    /// as <c>year 1953</c>, differing endpoints as <c>years 1950–1955</c>, a from-only as
+    /// <c>from 1950</c>, and a to-only as <c>through 1955</c>. Empty when no year is supplied.
+    /// </summary>
+    private static string YearSummary(SearchCriteria criteria)
+    {
+        if (criteria.YearFrom is not null && criteria.YearTo is not null)
+        {
+            if (criteria.YearFrom == criteria.YearTo)
+            {
+                return "year " + criteria.YearFrom.ToString();
+            }
+            return "years " + criteria.YearFrom.ToString() + "–" + criteria.YearTo.ToString();
+        }
+        if (criteria.YearFrom is not null)
+        {
+            return "from " + criteria.YearFrom.ToString();
+        }
+        if (criteria.YearTo is not null)
+        {
+            return "through " + criteria.YearTo.ToString();
+        }
+        return "";
     }
 
     // --- Search scope selection (launcher) ----------------------------------------

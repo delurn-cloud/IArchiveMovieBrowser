@@ -93,15 +93,41 @@
                            Margin="0,6,8,0"
                            VerticalAlignment="Center"
                            Foreground="{x:Static SystemColors.ControlTextBrush}"/>
-                <TextBox x:Name="YearTextBox"
-                         Grid.Row="1" Grid.Column="1"
-                         MinWidth="120"
-                         MinHeight="26"
-                         Padding="6,4"
-                         FontSize="13"
-                         VerticalContentAlignment="Center"
-                         AutomationProperties.Name="Year"
-                         AutomationProperties.HelpText="Optional; exactly four digits from 1800 through the current year plus one."/>
+                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,4,0,0">
+                    <StackPanel Margin="0,0,4,0">
+                        <TextBlock Text="From"
+                                   FontSize="11"
+                                   Margin="0,0,0,2"
+                                   Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                        <TextBox x:Name="YearFromTextBox"
+                                 MinWidth="72"
+                                 Width="72"
+                                 Height="24"
+                                 Padding="6,3"
+                                 FontSize="12"
+                                 AutomationProperties.Name="Year from"
+                                 AutomationProperties.HelpText="Optional inclusive lower bound for an exact year or year range, exactly four digits from 1800 through the current year plus one."/>
+                    </StackPanel>
+                    <TextBlock Text="to"
+                               FontSize="12"
+                               VerticalAlignment="Center"
+                               Margin="0,14,4,0"
+                               Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                    <StackPanel Margin="0,0,0,0">
+                        <TextBlock Text="To"
+                                   FontSize="11"
+                                   Margin="0,0,0,2"
+                                   Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                        <TextBox x:Name="YearToTextBox"
+                                 MinWidth="72"
+                                 Width="72"
+                                 Height="24"
+                                 Padding="6,3"
+                                 FontSize="12"
+                                 AutomationProperties.Name="Year to"
+                                 AutomationProperties.HelpText="Optional inclusive upper bound for an exact year or year range, exactly four digits from 1800 through the current year plus one. Must be at least Year from."/>
+                    </StackPanel>
+                </StackPanel>
             </Grid>
         </Expander>
 

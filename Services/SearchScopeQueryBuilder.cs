@@ -64,17 +64,44 @@ public static class SearchScopeQueryBuilder
             first = false;
         }
 
-        if (criteria.Year is not null)
+        if (criteria.YearFrom is not null || criteria.YearTo is not null)
         {
             if (!first)
             {
                 parts = parts + " AND ";
             }
-            parts = parts + "year:" + criteria.Year.ToString();
+            parts = parts + BuildYearClause(criteria);
             first = false;
         }
 
         return parts;
+    }
+
+    /// <summary>
+    /// Builds the <c>year:</c> clause for the inclusive range endpoints. Equal endpoints produce
+    /// the legacy <c>year:YYYY</c>; differing endpoints produce the inclusive range
+    /// <c>year:[FROM TO TO]</c>; a missing endpoint is completed with the accepted bounds
+    /// (1800 on the low side, the criteria's validated maximum on the high side).
+    /// </summary>
+    private static string BuildYearClause(SearchCriteria criteria)
+    {
+        if (criteria.IsExactYear)
+        {
+            return "year:" + criteria.YearFrom.ToString();
+        }
+
+        if (criteria.YearFrom is not null && criteria.YearTo is not null)
+        {
+            return "year:[" + criteria.YearFrom.ToString() + " TO " + criteria.YearTo.ToString() + "]";
+        }
+
+        if (criteria.YearFrom is not null)
+        {
+            int max = criteria.YearMax.HasValue ? criteria.YearMax.Value : 0;
+            return "year:[" + criteria.YearFrom.ToString() + " TO " + max.ToString() + "]";
+        }
+
+        return "year:[1800 TO " + criteria.YearTo.ToString() + "]";
     }
 
     /// <summary>
