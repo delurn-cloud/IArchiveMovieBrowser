@@ -4,7 +4,7 @@ IArchiveMovieBrowser is a Windows desktop application for discovering public mov
 
 The application is an independent project that uses public Internet Archive search metadata and file-delivery endpoints. It is not affiliated with, endorsed by, or supported by the Internet Archive, and it is not an official Internet Archive application.
 
-[View the main window with Genre filters](docs/images/main-window-genre.png)
+[View the main window before searching](docs/images/main-window-genre.png)
 
 [View the compact-height main window with scrolling](docs/images/main-window-genre-scroll.png)
 
