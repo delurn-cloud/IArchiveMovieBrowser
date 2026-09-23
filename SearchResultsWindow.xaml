@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Search Results — Internet Archive Movie Browser"
-        Width="900" Height="650"
-        MinWidth="650" MinHeight="450"
+        Width="720" Height="650"
+        MinWidth="560" MinHeight="450"
         WindowStartupLocation="CenterOwner">
 
     <Grid Margin="10">
