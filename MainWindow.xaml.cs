@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
@@ -31,6 +32,7 @@ namespace IArchiveMovieBrowser
         private CompletedSearch? _latest;
 
         private readonly IPlayerExecutableStorage _playerStorage;
+        private readonly GenreSelectionState _genreSelection = new GenreSelectionState();
 
         public MainWindow()
         {
@@ -46,6 +48,8 @@ namespace IArchiveMovieBrowser
             SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
 
             ApplyPlayerState(ExternalPlayerLogic.AnalyzeStoredPath(_playerStorage.Load()));
+
+            RegisterScrollHintTriggers();
 
             Closed += (sender, e) =>
             {
@@ -132,6 +136,55 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
                 : Visibility.Visible;
         }
 
+        /// <summary>
+        /// Wires the events that can change whether the main content is taller than its visible
+        /// viewport: the initial load, any window/viewport resize, and either expander toggling. Each
+        /// of these fires after the relevant layout change, so the measured extent/viewport are the
+        /// settled values used to decide the scroll hint's visibility.
+        /// </summary>
+        private void RegisterScrollHintTriggers()
+        {
+            Loaded += OnWindowLoaded;
+            MainScrollViewer.SizeChanged += OnMainScrollSizeChanged;
+            NarrowResults.Expanded += OnNarrowResultsExpanded;
+            NarrowResults.Collapsed += OnNarrowResultsExpanded;
+            GenreExpander.Expanded += OnGenreExpanded;
+            GenreExpander.Collapsed += OnGenreExpanded;
+        }
+
+        private void OnWindowLoaded(object sender, EventArgs e)
+        {
+            UpdateScrollHint();
+        }
+
+        private void OnMainScrollSizeChanged(object sender, EventArgs e)
+        {
+            UpdateScrollHint();
+        }
+
+        private void OnNarrowResultsExpanded(object sender, EventArgs e)
+        {
+            UpdateScrollHint();
+        }
+
+        private void OnGenreExpanded(object sender, EventArgs e)
+        {
+            UpdateScrollHint();
+        }
+
+        /// <summary>
+        /// Shows the one-line, non-focusable "scroll down" hint only while the main content is
+        /// genuinely taller than the scroll viewport (i.e. exactly when there is below-the-fold
+        /// content the user can reach by scrolling), and hides it whenever everything fits. Comparing
+        /// the ScrollViewer's extent to its viewport uses the actual laid-out geometry, so the hint
+        /// never tracks a mere scrollbar-present artifact and never affects search or navigation.
+        /// </summary>
+        private void UpdateScrollHint()
+        {
+            bool hasBelowTheFold = MainScrollViewer.ExtentHeight > MainScrollViewer.ViewportHeight + 0.5;
+            ScrollHintText.Visibility = hasBelowTheFold ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         private void OnSearchClick(object sender, RoutedEventArgs e)
         {
             ExecuteSearchAsync();
@@ -152,6 +205,87 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
         private void OnOpenResultsClick(object sender, RoutedEventArgs e)
         {
             OpenOrUpdateResults();
+        }
+
+        /// <summary>
+        /// Handles any genre checkbox toggle. Only the visible header/count and the Clear action state
+        /// change; no network request is issued here. Genres take effect when Search or Refresh runs.
+        /// </summary>
+        private void OnGenreSelectionChanged(object sender, RoutedEventArgs e)
+        {
+            SyncGenreSelectionFromCheckboxes();
+            UpdateGenreSectionUI();
+        }
+
+        /// <summary>
+        /// Clears every selected genre without issuing a request and leaves all other filters
+        /// (title, scope, credited-to, year) untouched. Disabled/harmless when nothing is selected.
+        /// </summary>
+        private void OnClearGenresClick(object sender, RoutedEventArgs e)
+        {
+            ApplyGenreCheckboxes(false);
+            SyncGenreSelectionFromCheckboxes();
+            UpdateGenreSectionUI();
+        }
+
+        /// <summary>Refreshes the Genre header label and Clear action state from current selections.</summary>
+        private void UpdateGenreSectionUI()
+        {
+            GenreHeaderText.Text = SearchDisplayText.GenreSectionHeader(_genreSelection.SelectedCount());
+            ClearGenresButton.IsEnabled = _genreSelection.SelectedCount() > 0;
+        }
+
+        /// <summary>Sets every genre checkbox to the given checked state (no request).</summary>
+        private void ApplyGenreCheckboxes(bool isChecked)
+        {
+            foreach (GenreDefinition genre in GenreCatalog.All())
+            {
+                GenreCheckboxFor(genre).IsChecked = isChecked;
+            }
+        }
+
+        /// <summary>Reads all checkbox states into <see cref="_genreSelection"/>.</summary>
+        private void SyncGenreSelectionFromCheckboxes()
+        {
+            _genreSelection.Clear();
+            foreach (GenreDefinition genre in GenreCatalog.All())
+            {
+                if (GenreCheckboxFor(genre).IsChecked == true)
+                {
+                    _genreSelection.Select(genre.Key);
+                }
+            }
+        }
+
+        /// <summary>Selected genre keys in the declared catalog order (deduplicated), for the request.</summary>
+        private IReadOnlyList<string> SelectedGenreKeys()
+        {
+            SyncGenreSelectionFromCheckboxes();
+            return _genreSelection.SelectedKeys();
+        }
+
+        /// <summary>Returns the checkbox control for a catalog genre, by stable label-derived name.</summary>
+        private CheckBox GenreCheckboxFor(GenreDefinition genre)
+        {
+            return genre.Key switch
+            {
+                "action" => GenreCheckboxAction,
+                "adventure" => GenreCheckboxAdventure,
+                "animation" => GenreCheckboxAnimation,
+                "comedy" => GenreCheckboxComedy,
+                "crime" => GenreCheckboxCrime,
+                "documentary" => GenreCheckboxDocumentary,
+                "drama" => GenreCheckboxDrama,
+                "family" => GenreCheckboxFamily,
+                "fantasy" => GenreCheckboxFantasy,
+                "horror" => GenreCheckboxHorror,
+                "mystery" => GenreCheckboxMystery,
+                "romance" => GenreCheckboxRomance,
+                "science-fiction" => GenreCheckboxScienceFiction,
+                "thriller" => GenreCheckboxThriller,
+                "war" => GenreCheckboxWar,
+                _ => GenreCheckboxWestern
+            };
         }
 
         /// <summary>
@@ -181,6 +315,7 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
                 ResultStage.Visibility = Visibility.Collapsed;
                 StatusText.Text = SearchDisplayText.EmptyQueryText();
                 SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
+                UpdateScrollHint();
                 return;
             }
 
@@ -190,6 +325,7 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
                 ResultStage.Visibility = Visibility.Collapsed;
                 StatusText.Text = build.Message;
                 SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
+                UpdateScrollHint();
                 return;
             }
 
@@ -201,10 +337,12 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
             ResultStage.Visibility = Visibility.Collapsed;
             StatusText.Text = SearchDisplayText.SearchingText();
             SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
+            UpdateScrollHint();
 
             try
             {
-                var request = new InternetArchiveSearchRequest(build.Criteria!, 1, PageSize);
+                SearchCriteria genreCriteria = build.Criteria!.WithGenres(SelectedGenreKeys());
+                var request = new InternetArchiveSearchRequest(genreCriteria, 1, PageSize);
                 InternetArchiveSearchPage results =
                     await _client.SearchAsync(request, tokenSource.Token);
 
@@ -215,7 +353,7 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
 
                 SearchProgress.Visibility = Visibility.Collapsed;
 
-                var completed = new CompletedSearch(build.Criteria!, results.NumFound, 1, results.Results);
+                var completed = new CompletedSearch(genreCriteria, results.NumFound, 1, results.Results);
                 _latest = completed;
 
                 if (results.Results.Count == 0)
@@ -223,12 +361,14 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
                     ResultStageText.Text = SearchDisplayText.NoMatchingItemsText();
                     ResultStage.Visibility = Visibility.Visible;
                     SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
+                    UpdateScrollHint();
                     return;
                 }
 
                 ResultStageText.Text = SearchDisplayText.FoundText(results.NumFound);
                 ResultStage.Visibility = Visibility.Visible;
                 SetOpenResultsEnabled(results.NumFound);
+                UpdateScrollHint();
                 UpdateOpenResultsWindow();
             }
             catch (OperationCanceledException)
@@ -312,6 +452,7 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
             SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
             ResultStageText.Text = SearchDisplayText.StatusError(message);
             ResultStage.Visibility = Visibility.Visible;
+            UpdateScrollHint();
         }
     }
 }

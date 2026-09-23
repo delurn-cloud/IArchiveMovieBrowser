@@ -1,4 +1,4 @@
-﻿<Window x:Class="IArchiveMovieBrowser.MainWindow"
+<Window x:Class="IArchiveMovieBrowser.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -9,7 +9,15 @@
         MinWidth="460" MinHeight="390"
         WindowStartupLocation="CenterScreen">
 
-    <StackPanel Margin="12">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <ScrollViewer x:Name="MainScrollViewer"
+                      Grid.Row="0"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
         <TextBlock Text="Search Internet Archive"
                    FontSize="17"
                    FontWeight="SemiBold"
@@ -90,6 +98,7 @@ You can enter part of a title to discover likely matches, then search again usin
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Grid.Column="0"
                            Text="Made by / credited to"
@@ -147,8 +156,100 @@ You can enter part of a title to discover likely matches, then search again usin
                                  AutomationProperties.HelpText="Optional inclusive upper bound for an exact year or year range, exactly four digits from 1800 through the current year plus one. Must be at least Year from."/>
                     </StackPanel>
                 </StackPanel>
+<Expander Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                          x:Name="GenreExpander"
+                          IsExpanded="False"
+                          Margin="0,6,0,0"
+                          AutomationProperties.Name="Genre">
+                    <Expander.Header>
+                        <TextBlock x:Name="GenreHeaderText"
+                                   Text="Genre"
+                                   FontSize="12"
+                                   Foreground="{x:Static SystemColors.ControlTextBrush}"
+                                   AutomationProperties.Name="Genre filter"/>
+                    </Expander.Header>
+                    <StackPanel Margin="0,6,0,6">
+                            <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <CheckBox x:Name="GenreCheckboxAction" Grid.Row="0" Grid.Column="0"
+                                      Content="Action" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Action genre"/>
+                            <CheckBox x:Name="GenreCheckboxAdventure" Grid.Row="0" Grid.Column="1"
+                                      Content="Adventure" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Adventure genre"/>
+                            <CheckBox x:Name="GenreCheckboxAnimation" Grid.Row="0" Grid.Column="2"
+                                      Content="Animation" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Animation genre"/>
+                            <CheckBox x:Name="GenreCheckboxComedy" Grid.Row="0" Grid.Column="3"
+                                      Content="Comedy" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Comedy genre"/>
+                            <CheckBox x:Name="GenreCheckboxCrime" Grid.Row="1" Grid.Column="0"
+                                      Content="Crime" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Crime genre"/>
+                            <CheckBox x:Name="GenreCheckboxDocumentary" Grid.Row="1" Grid.Column="1"
+                                      Content="Documentary" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Documentary genre"/>
+                            <CheckBox x:Name="GenreCheckboxDrama" Grid.Row="1" Grid.Column="2"
+                                      Content="Drama" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Drama genre"/>
+                            <CheckBox x:Name="GenreCheckboxFamily" Grid.Row="1" Grid.Column="3"
+                                      Content="Family" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Family genre"/>
+                            <CheckBox x:Name="GenreCheckboxFantasy" Grid.Row="2" Grid.Column="0"
+                                      Content="Fantasy" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Fantasy genre"/>
+                            <CheckBox x:Name="GenreCheckboxHorror" Grid.Row="2" Grid.Column="1"
+                                      Content="Horror" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Horror genre"/>
+                            <CheckBox x:Name="GenreCheckboxMystery" Grid.Row="2" Grid.Column="2"
+                                      Content="Mystery" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Mystery genre"/>
+                            <CheckBox x:Name="GenreCheckboxRomance" Grid.Row="2" Grid.Column="3"
+                                      Content="Romance" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Romance genre"/>
+                            <CheckBox x:Name="GenreCheckboxScienceFiction" Grid.Row="3" Grid.Column="0"
+                                      Content="Science fiction" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Science fiction genre"/>
+                            <CheckBox x:Name="GenreCheckboxThriller" Grid.Row="3" Grid.Column="1"
+                                      Content="Thriller" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Thriller genre"/>
+                            <CheckBox x:Name="GenreCheckboxWar" Grid.Row="3" Grid.Column="2"
+                                      Content="War" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="War genre"/>
+                            <CheckBox x:Name="GenreCheckboxWestern" Grid.Row="3" Grid.Column="3"
+                                      Content="Western" Click="OnGenreSelectionChanged"
+                                      AutomationProperties.Name="Western genre"/>
+                        </Grid>
+                        <Button x:Name="ClearGenresButton"
+                                Content="Clear genres"
+                                Width="120" Height="30"
+                                IsEnabled="False"
+                                HorizontalAlignment="Left"
+                                Click="OnClearGenresClick"
+                                AutomationProperties.Name="Clear genres"/>
+                    </StackPanel>
+                </Expander>
             </Grid>
         </Expander>
+
+        <TextBlock x:Name="ScrollHintText"
+                   Text="More options and status are below — scroll down."
+                   FontSize="12"
+                   TextWrapping="Wrap"
+                   Margin="0,2,0,6"
+                   Visibility="Collapsed"
+                   Foreground="{x:Static SystemColors.ControlTextBrush}"/>
 
         <TextBlock Text="Search public Internet Archive movie and video titles."
                    FontSize="12"
@@ -233,4 +334,6 @@ You can enter part of a title to discover likely matches, then search again usin
             </StackPanel>
         </Border>
     </StackPanel>
+        </ScrollViewer>
+    </Grid>
 </Window>

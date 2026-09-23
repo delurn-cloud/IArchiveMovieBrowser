@@ -136,6 +136,26 @@ public static class SearchDisplayText
     /// <summary>Visible label for the optional creator narrow filter (user-facing wording).</summary>
     public const string MadeByCreditedToLabel = "Made by / credited to";
 
+    /// <summary>Visible label for the optional Genre narrow filter section header.</summary>
+    public const string GenreLabel = "Genre";
+
+    /// <summary>Visible label for the action that clears all selected genres.</summary>
+    public const string ClearGenresLabel = "Clear genres";
+
+    /// <summary>
+    /// Accessible header text for the Genre section. When genres are active it reports how many are
+    /// selected (plain text, not color), so a user still sees that Genre is active even while the
+    /// section is collapsed. Returns just <see cref="GenreLabel"/> when nothing is selected.
+    /// </summary>
+    public static string GenreSectionHeader(int selectedCount)
+    {
+        if (selectedCount <= 0)
+        {
+            return GenreLabel;
+        }
+        return GenreLabel + " (" + selectedCount + " selected)";
+    }
+
     /// <summary>Accessible help text for the creator narrow filter (user-facing wording).</summary>
     public const string MadeByCreditedToHelp =
         "Optionally narrow results by a name or organization in Internet Archive creator metadata, " +

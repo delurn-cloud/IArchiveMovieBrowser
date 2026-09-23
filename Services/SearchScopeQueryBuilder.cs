@@ -74,6 +74,16 @@ public static class SearchScopeQueryBuilder
             first = false;
         }
 
+        if (criteria.SelectedGenres is not null && criteria.SelectedGenres.Count > 0)
+        {
+            if (!first)
+            {
+                parts = parts + " AND ";
+            }
+            parts = parts + BuildGenreClause(criteria.SelectedGenres);
+            first = false;
+        }
+
         return parts;
     }
 
@@ -102,6 +112,44 @@ public static class SearchScopeQueryBuilder
         }
 
         return "year:[1800 TO " + criteria.YearTo.ToString() + "]";
+    }
+/// <summary>
+    /// Builds the <c>subject:</c> clause for the selected genres. Each selected genre key is resolved
+    /// to its fixed, curated IA <c>subject</c> phrase from <see cref="GenreCatalog"/>, then safely
+    /// escaped and quoted as a literal field phrase. Multiple genres are combined inside a
+    /// parenthesized uppercase <c>OR</c> group so results match any selected genre; a single selected
+    /// genre is emitted without redundant parentheses. The list is already in declared order and
+    /// deduplicated, so duplicate selections cannot produce duplicate clauses and the output is
+    /// deterministic.
+    /// </summary>
+    private static string BuildGenreClause(IReadOnlyList<string> selectedGenres)
+    {
+        string group = "";
+        bool first = true;
+        foreach (string key in selectedGenres)
+        {
+            string? phrase = GenreCatalog.SubjectPhraseFor(key);
+            if (phrase is null)
+            {
+                continue; // unknown keys are never resolved to untrusted query text
+            }
+            if (!first)
+            {
+                group = group + " OR ";
+            }
+            group = group + "subject:\"" + EscapeLiteral(phrase) + "\"";
+            first = false;
+        }
+
+        if (group.Length == 0)
+        {
+            return group;
+        }
+        if (selectedGenres.Count <= 1)
+        {
+            return group;
+        }
+        return "(" + group + ")";
     }
 
     /// <summary>

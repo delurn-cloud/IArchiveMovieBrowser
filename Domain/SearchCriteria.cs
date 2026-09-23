@@ -32,6 +32,13 @@ public sealed class SearchCriteria
     public SearchScope Scope { get; }
 
     /// <summary>
+    /// The selected genre keys (in declared catalog order, deduplicated) that constrain results to
+    /// items matching any of those IA <c>subject</c> phrases. Empty when no genre filter is active.
+    /// Genres are an optional narrowing filter and never make an otherwise-blank search valid.
+    /// </summary>
+    public IReadOnlyList<string> SelectedGenres { get; }
+
+    /// <summary>
     /// True when at least one of title / actor-creator / year-from / year-to is present, i.e. a
     /// search can run.
     /// </summary>
@@ -50,6 +57,7 @@ public sealed class SearchCriteria
         int? yearTo,
         int? yearMax,
         SearchScope scope,
+        IReadOnlyList<string> selectedGenres,
         bool hasAnyCriterion)
     {
         Title = title;
@@ -58,6 +66,7 @@ public sealed class SearchCriteria
         YearTo = yearTo;
         YearMax = yearMax;
         Scope = scope;
+        SelectedGenres = selectedGenres ?? new System.Collections.Generic.List<string>();
         HasAnyCriterion = hasAnyCriterion;
     }
 
@@ -76,6 +85,7 @@ public sealed class SearchCriteria
             null,
             null,
             scope,
+            new System.Collections.Generic.List<string>(),
             hasAny);
     }
 
@@ -107,6 +117,26 @@ public sealed class SearchCriteria
             yearTo,
             yearMax,
             scope,
+            new System.Collections.Generic.List<string>(),
             hasAny);
+    }
+
+    /// <summary>
+    /// Returns a new criteria identical to this one except that the selected genre keys are replaced
+    /// by the given list, normalized to the declared catalog order and deduplicated. All other
+    /// criteria (title, actor-creator, year endpoints, scope, validity) are preserved unchanged.
+    /// Clearing genres (passing an empty list) therefore leaves every other filter intact.
+    /// </summary>
+    public SearchCriteria WithGenres(System.Collections.Generic.IReadOnlyList<string> genreKeys)
+    {
+        return new SearchCriteria(
+            Title,
+            Creator,
+            YearFrom,
+            YearTo,
+            YearMax,
+            Scope,
+            GenreCatalog.NormalizeSelection(genreKeys),
+            HasAnyCriterion);
     }
 }
