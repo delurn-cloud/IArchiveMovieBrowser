@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Details — Internet Archive Movie Browser"
+        Icon="/IArchiveMovieBrowser.ico"
         Width="660" Height="560"
         MinWidth="520" MinHeight="420"
         WindowStartupLocation="CenterOwner">

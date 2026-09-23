@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Search Results — Internet Archive Movie Browser"
+        Icon="/IArchiveMovieBrowser.ico"
         Width="720" Height="650"
         MinWidth="560" MinHeight="450"
         WindowStartupLocation="CenterOwner">

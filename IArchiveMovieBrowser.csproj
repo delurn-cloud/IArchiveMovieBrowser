@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>IArchiveMovieBrowser.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +17,10 @@
     <None Remove="IArchiveMovieBrowser.Tests\**" />
     <Page Remove="IArchiveMovieBrowser.Tests\**" />
     <Resource Remove="IArchiveMovieBrowser.Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="IArchiveMovieBrowser.ico" />
   </ItemGroup>
 
 </Project>
