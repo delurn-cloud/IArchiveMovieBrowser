@@ -48,3 +48,8 @@ Desktop.ini
 ## Build results fallback
 bin/
 obj/
+
+## Local packaging and review artifacts
+IArchiveMovieBrowser-setup.exe
+IArchiveMovieBrowser.iss
+local-review/

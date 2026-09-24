@@ -161,9 +161,17 @@ The application is under active development.
 
 Current scope is a focused Windows tool that searches public Internet Archive movie/video material, narrows results by creator/credit, year, and curated Genre choices, browses item details, plays a selected video in a configured external player, and downloads a single selected video file with safe overwrite handling. There is no authentication, no bulk or queued downloading, and no resume or history features.
 
+## Downloads
+
+IArchiveMovieBrowser supports downloading one user-selected file at a time.
+
+This is intentional. The application is designed for finding, reviewing, playing, or saving individual Internet Archive movie files—not for bulk downloading or mirroring collections. Keeping downloads explicit and single-file helps users choose the format they actually want and is more considerate of Internet Archive as a shared nonprofit resource.
+
+Bulk queues, concurrent downloads, and collection mirroring are outside this project's scope.
+
 ## License
 
-License information has not yet been added.
+The project is licensed under the MIT License.
 
 ## Acknowledgments
 
