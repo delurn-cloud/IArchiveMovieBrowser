@@ -341,7 +341,12 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
 
             try
             {
-                SearchCriteria genreCriteria = build.Criteria!.WithGenres(SelectedGenreKeys());
+                // Genres and trailer exclusion are both narrowing options layered onto the validated
+                // criteria. They are read only when Search runs (never on toggle), and they ride
+                // along inside CompletedSearch so paging and Refresh keep them applied.
+                SearchCriteria genreCriteria = build.Criteria!
+                    .WithGenres(SelectedGenreKeys())
+                    .WithExcludeTrailers(ExcludeTrailersCheckBox.IsChecked == true);
                 var request = new InternetArchiveSearchRequest(genreCriteria, 1, PageSize);
                 InternetArchiveSearchPage results =
                     await _client.SearchAsync(request, tokenSource.Token);

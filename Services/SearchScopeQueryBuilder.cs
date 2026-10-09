@@ -84,8 +84,37 @@ public static class SearchScopeQueryBuilder
             first = false;
         }
 
+        if (criteria.ExcludeTrailers)
+        {
+            if (!first)
+            {
+                parts = parts + " AND ";
+            }
+            parts = parts + TrailerExclusionClause;
+            first = false;
+        }
+
         return parts;
     }
+
+    /// <summary>
+    /// The fixed exclusion expression appended when <see cref="SearchCriteria.ExcludeTrailers"/> is
+    /// on. Every term is app-controlled literal text (never user input), so it needs no escaping.
+    ///
+    /// The rule is deliberately aggressive and is documented as such: it excludes items filed under
+    /// the Internet Archive <c>movie_trailers</c> collection, items carrying the <c>trailers</c> or
+    /// singular <c>trailer</c> subject, and any item whose title contains the word "trailer". Because
+    /// the last clause is a plain title-field match, it also hides full movies and mixed uploads, and
+    /// it hides titles that merely contain the word (for example <c>Trailer Park Boys</c>). It is not
+    /// a promise to remove every teaser, TV spot, or game promo: those disappear only when they match
+    /// these metadata/title rules. The Internet Archive has no single canonical "trailer" field, so
+    /// trailers filed under unremarkable titles and untagged items remain.
+    /// </summary>
+    public const string TrailerExclusionClause =
+        "NOT collection:\"movie_trailers\""
+        + " AND NOT subject:\"trailers\""
+        + " AND NOT subject:\"trailer\""
+        + " AND NOT (title:\"trailer\" OR title:\"trailers\")";
 
     /// <summary>
     /// Builds the <c>year:</c> clause for the inclusive range endpoints. Equal endpoints produce

@@ -100,6 +100,7 @@ You can enter part of a title to discover likely matches, then search again usin
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Grid.Column="0"
                            Text="Made by / credited to"
@@ -241,6 +242,21 @@ You can enter part of a title to discover likely matches, then search again usin
                                 AutomationProperties.Name="Clear genres"/>
                     </StackPanel>
                 </Expander>
+                <CheckBox x:Name="ExcludeTrailersCheckBox"
+                          Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                          Content="Exclude trailers"
+                          Margin="0,10,0,2"
+                          VerticalAlignment="Center"
+                          AutomationProperties.Name="Exclude trailers"
+                          AutomationProperties.HelpText="Removes trailer entries by Internet Archive collection and subject metadata, and any item whose title contains the word trailer. This is aggressive: it can also hide full movies, mixed uploads that include trailers, and titles that merely contain the word, such as Trailer Park Boys. It does not remove every teaser, TV spot, or game promo; those disappear only when they match these rules.">
+                    <CheckBox.ToolTip>
+                        <ToolTip MaxWidth="380">
+                            <TextBlock MaxWidth="380"
+                                       TextWrapping="Wrap"
+                                       Text="Removes trailer entries by Internet Archive collection and subject metadata, and any item whose title contains the word trailer. This is aggressive: it can also hide full movies, mixed uploads that include trailers, and titles that merely contain the word, such as Trailer Park Boys. It does not remove every teaser, TV spot, or game promo; those disappear only when they match these rules."/>
+                        </ToolTip>
+                    </CheckBox.ToolTip>
+                </CheckBox>
             </Grid>
         </Expander>
 

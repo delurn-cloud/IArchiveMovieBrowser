@@ -39,6 +39,17 @@ public sealed class SearchCriteria
     public IReadOnlyList<string> SelectedGenres { get; }
 
     /// <summary>
+    /// True when trailer, teaser, and promotional entries should be omitted from results. This is an
+    /// aggressive, opt-in narrowing filter: it excludes items by Internet Archive collection/subject
+    /// metadata and by the presence of the word "trailer" in the title, so it can also hide full
+    /// movies, mixed "with trailers" uploads, and titles that merely contain the word (for example
+    /// <c>Trailer Park Boys</c>). It never makes an otherwise-blank search valid, and it does not
+    /// promise to remove every teaser, TV spot, or game promo: those disappear only when they match
+    /// the metadata/title rules. False by default.
+    /// </summary>
+    public bool ExcludeTrailers { get; }
+
+    /// <summary>
     /// True when at least one of title / actor-creator / year-from / year-to is present, i.e. a
     /// search can run.
     /// </summary>
@@ -58,6 +69,7 @@ public sealed class SearchCriteria
         int? yearMax,
         SearchScope scope,
         IReadOnlyList<string> selectedGenres,
+        bool excludeTrailers,
         bool hasAnyCriterion)
     {
         Title = title;
@@ -67,6 +79,7 @@ public sealed class SearchCriteria
         YearMax = yearMax;
         Scope = scope;
         SelectedGenres = selectedGenres ?? new System.Collections.Generic.List<string>();
+        ExcludeTrailers = excludeTrailers;
         HasAnyCriterion = hasAnyCriterion;
     }
 
@@ -86,13 +99,14 @@ public sealed class SearchCriteria
             null,
             scope,
             new System.Collections.Generic.List<string>(),
+            false,
             hasAny);
     }
 
     /// <summary>
     /// Builds a criteria from already-validated fields (including the current-year-based maximum
-    /// bound). The caller is responsible for deciding validity; this normalizes whitespace and
-    /// recomputes <see cref="HasAnyCriterion"/>.
+    /// bound), with trailer exclusion off. The caller is responsible for deciding validity; this
+    /// normalizes whitespace and recomputes <see cref="HasAnyCriterion"/>.
     /// </summary>
     public static SearchCriteria Validated(
         string? title,
@@ -118,6 +132,7 @@ public sealed class SearchCriteria
             yearMax,
             scope,
             new System.Collections.Generic.List<string>(),
+            false,
             hasAny);
     }
 
@@ -137,6 +152,28 @@ public sealed class SearchCriteria
             YearMax,
             Scope,
             GenreCatalog.NormalizeSelection(genreKeys),
+            ExcludeTrailers,
+            HasAnyCriterion);
+    }
+
+    /// <summary>
+    /// Returns a new criteria identical to this one except that trailer exclusion is set to
+    /// <paramref name="excludeTrailers"/>. All other criteria (title, actor-creator, year endpoints,
+    /// scope, selected genres, validity) are preserved unchanged, so this composes in either order
+    /// with <see cref="WithGenres"/>. Because <see cref="HasAnyCriterion"/> is carried through
+    /// untouched, turning exclusion on or off never makes an otherwise-blank search valid.
+    /// </summary>
+    public SearchCriteria WithExcludeTrailers(bool excludeTrailers)
+    {
+        return new SearchCriteria(
+            Title,
+            Creator,
+            YearFrom,
+            YearTo,
+            YearMax,
+            Scope,
+            SelectedGenres,
+            excludeTrailers,
             HasAnyCriterion);
     }
 }

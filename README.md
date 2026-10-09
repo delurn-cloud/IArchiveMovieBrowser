@@ -39,6 +39,7 @@ Expand **Narrow results** from the main window to refine a search:
 - **Made by / credited to** — narrow by a name or organization in Internet Archive creator metadata, such as a director, producer, studio, uploader, or curator. This does not search actors or cast.
 - **Year** — filter by an exact year or a year range (From / To).
 - **Genre** — choose one or more of the curated checklist. Clearing the selection removes the genre constraint with **Clear genres**.
+- **Exclude trailers** — off by default; removes trailer entries. See below before enabling it.
 
 ### Genre
 - The **Genre** checklist offers a fixed set of curated, user-facing choices such as Comedy, Documentary, Horror, and Science fiction.
@@ -46,9 +47,15 @@ Expand **Narrow results** from the main window to refine a search:
 - Each genre choice maps to a matching Internet Archive `subject` metadata phrase. The list is a set of suggestions for searching, not a complete or standardized movie-genre database.
 - Because Genre relies on `subject` metadata supplied to the Internet Archive, results are only as good as the metadata attached to each item.
 
+### Exclude trailers
+- **Exclude trailers** is an opt-in checkbox, off by default. When enabled it omits items filed under the Internet Archive `movie_trailers` collection, items carrying the `trailers` or `trailer` subject, and any item whose title contains the word "trailer".
+- **This filter is aggressive.** Because the title rule is a plain title-field match, it can also hide full movies and mixed uploads that include trailers, such as a feature uploaded "with original trailers." It also hides titles that merely contain the word, such as *Trailer Park Boys*, even though nothing about them is a trailer.
+- It does **not** promise to remove every trailer, teaser, TV spot, or game promo. Those disappear only when they match the collection, subject, or title rules described above. Trailers filed under unremarkable titles and items with no trailer metadata at all can still appear.
+- Leave it off when you want to see everything the Internet Archive holds for a search, including trailers and mixed uploads.
+
 ### Paging and Refresh
 - The Search Results window shows a result-count and current-page summary.
-- **Previous** and **Next** move between pages, and **Refresh** re-runs the current search. Genre and other narrow filters are retained across paging and Refresh.
+- **Previous** and **Next** move between pages, and **Refresh** re-runs the current search. Genre, **Exclude trailers**, and the other narrow filters are retained across paging and Refresh.
 
 ### The Search Results window
 Searching from the main window opens a separate Search Results window listing the matching items, each showing its title along with available date/year and creator metadata. Select an item and choose **Open Details** to inspect it.
@@ -108,6 +115,7 @@ Keep in mind:
 
 - Some items or files may be unavailable, access-restricted, missing, or unsuitable for a particular player.
 - Genre reflects curated choices mapped to Internet Archive `subject` metadata, not a universal movie taxonomy.
+- **Exclude trailers** depends on Internet Archive collection, subject, and title metadata, none of which is a canonical "is a trailer" flag. It therefore both misses some trailers and hides some full movies; see [Exclude trailers](#exclude-trailers).
 - The application does not authenticate, use stored credentials or cookies, or attempt to bypass any access restrictions.
 - The application is independent and is not affiliated with, endorsed by, or supported by the Internet Archive.
 
@@ -115,8 +123,8 @@ Keep in mind:
 
 1. In the main window, enter a title phrase and choose the desired **Search scope** (the default is **Watchable video**).
 2. Optionally expand **Narrow results**.
-3. Use **Made by / credited to**, **Year**, and **Genre** to narrow the search.
-4. With **Genre**, you can select two or more choices; results can match any selected genre, not necessarily all of them.
+3. Use **Made by / credited to**, **Year**, **Genre**, and optionally **Exclude trailers** to narrow the search.
+4. With **Genre**, you can select two or more choices; results can match any selected genre, not necessarily all of them. **Exclude trailers** is aggressive, so enable it only when you want trailers, mixed uploads, and titles containing the word "trailer" hidden.
 5. Run the search and open the results.
 6. Select an item in the Search Results window and choose **Open Details**.
 7. In Details, select a **playable video file**.
@@ -154,6 +162,8 @@ dotnet run --project IArchiveMovieBrowser.csproj
 ```
 
 Run this command from the repository root. If you run it from another directory, provide the path to `IArchiveMovieBrowser.csproj`.
+
+For a dated history of user-facing changes, see [CHANGELOG.md](CHANGELOG.md).
 
 ## Project status
 

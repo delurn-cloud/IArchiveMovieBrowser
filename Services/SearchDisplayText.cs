@@ -142,6 +142,22 @@ public static class SearchDisplayText
     /// <summary>Visible label for the action that clears all selected genres.</summary>
     public const string ClearGenresLabel = "Clear genres";
 
+    /// <summary>Visible label for the optional trailer-exclusion narrow filter.</summary>
+    public const string ExcludeTrailersLabel = "Exclude trailers";
+
+    /// <summary>
+    /// Accessible help text for the trailer-exclusion narrow filter (user-facing wording). States
+    /// plainly that the filter is aggressive, that it can hide full movies, mixed uploads, and titles
+    /// that merely contain the word "trailer", and that it is not a promise to remove every teaser,
+    /// TV spot, or game promo.
+    /// </summary>
+    public const string ExcludeTrailersHelp =
+        "Removes trailer entries by Internet Archive collection and subject metadata, and any item " +
+        "whose title contains the word trailer. This is aggressive: it can also hide full movies, " +
+        "mixed uploads that include trailers, and titles that merely contain the word, such as " +
+        "Trailer Park Boys. It does not remove every teaser, TV spot, or game promo; those disappear " +
+        "only when they match these rules.";
+
     /// <summary>
     /// Accessible header text for the Genre section. When genres are active it reports how many are
     /// selected (plain text, not color), so a user still sees that Genre is active even while the
