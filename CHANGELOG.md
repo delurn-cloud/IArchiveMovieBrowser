@@ -7,7 +7,7 @@ Work that has not shipped yet is grouped under **Unreleased**. When a release is
 that heading to the release version and date, and start a fresh empty **Unreleased** section
 above it.
 
-## Unreleased
+## 1.6.0 - 2026-10-14
 
 ### Added
 
