@@ -69,6 +69,129 @@ public static class DetailsDisplayText
     }
 
     /// <summary>License display: a readable "View license" label plus the actual URL.</summary>
+    // --- Subjects presentation ---------------------------------------------------------
+    //
+    // Items exist with thousands of subject entries, and some carry a single extremely long value,
+    // so an unbounded inline list overwhelms the Details view. This is a PRESENTATION fix only: the
+    // complete, unmodified subject list is always retained and reachable via Show all / Copy subjects.
+    // Nothing here filters search, deletes metadata, or judges the item's quality.
+
+    /// <summary>
+    /// Maximum number of actual subject entries rendered inline before the preview is shortened.
+    /// Counts entries, never characters, and never splits a value to manufacture more.
+    /// </summary>
+    public const int SubjectsPreviewLimit = 25;
+
+    /// <summary>
+    /// Target height of the collapsed Subjects block, in lines. The window turns this into a
+    /// concrete DIP bound; kept here so the intended density is documented alongside the limit.
+    /// </summary>
+    public const int SubjectsPreviewLines = 5;
+
+    public const string ShowAllSubjectsLabel = "Show all";
+    public const string ShowFewerSubjectsLabel = "Show fewer";
+    public const string CopySubjectsLabel = "Copy subjects";
+
+    /// <summary>Plain-text disclosure shown when entries were hidden by the preview.</summary>
+    public static string SubjectsHiddenCountText(int hiddenCount)
+    {
+        return hiddenCount > 0
+            ? "…and " + hiddenCount.ToString() + " more subjects."
+            : "";
+    }
+
+    /// <summary>
+    /// The non-blank subject entries, in their original order and with their content untouched.
+    /// Whitespace-only entries are dropped because they carry no information; no value is split,
+    /// truncated, reordered, or deduplicated.
+    /// </summary>
+    public static IReadOnlyList<string> NonBlankSubjects(IReadOnlyList<string>? values)
+    {
+        var kept = new List<string>();
+        if (values is null)
+        {
+            return kept;
+        }
+
+        foreach (string value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                kept.Add(value);
+            }
+        }
+
+        return kept;
+    }
+
+    /// <summary>Total number of actual subject entries available to display.</summary>
+    public static int SubjectsTotalCount(IReadOnlyList<string>? values)
+        => NonBlankSubjects(values).Count;
+
+    /// <summary>
+    /// How many actual entries the preview hides: the non-blank count beyond
+    /// <see cref="SubjectsPreviewLimit"/>. Never negative, and zero when everything fits.
+    /// </summary>
+    public static int SubjectsHiddenCount(IReadOnlyList<string>? values, int limit = SubjectsPreviewLimit)
+    {
+        int effectiveLimit = limit < 0 ? 0 : limit;
+        int total = SubjectsTotalCount(values);
+        return total <= effectiveLimit ? 0 : total - effectiveLimit;
+    }
+
+    /// <summary>
+    /// The collapsed preview: the first <c>limit</c> actual entries, in their original order, ready
+    /// to be shown one per row. A single extremely long entry is returned whole — it is one entry,
+    /// and splitting it would invent entries the item does not have.
+    /// </summary>
+    public static IReadOnlyList<string> SubjectsPreview(
+        IReadOnlyList<string>? values,
+        int limit = SubjectsPreviewLimit)
+    {
+        IReadOnlyList<string> subjects = NonBlankSubjects(values);
+        int effectiveLimit = limit < 0 ? 0 : limit;
+
+        var parts = new List<string>();
+        for (int i = 0; i < subjects.Count && i < effectiveLimit; i++)
+        {
+            parts.Add(subjects[i]);
+        }
+
+        return parts;
+    }
+
+    /// <summary>
+    /// The complete original subject list, one entry per line, for the clipboard. Every entry's
+    /// content is preserved exactly as the Internet Archive supplied it. The expanded on-screen
+    /// view shows these same entries one per row.
+    /// </summary>
+    public static string SubjectsFullText(IReadOnlyList<string>? values)
+    {
+        IReadOnlyList<string> subjects = NonBlankSubjects(values);
+        if (subjects.Count == 0)
+        {
+            return "";
+        }
+
+        return string.Join("\n", subjects);
+    }
+
+    /// <summary>
+    /// The clipboard payload for Copy subjects: the COMPLETE list, one entry per line, never just
+    /// the preview. Returns an empty string when there is nothing to copy.
+    /// </summary>
+    public static string SubjectsCopyPayload(IReadOnlyList<string>? values)
+        => SubjectsFullText(values);
+
+    public static string CopySubjectsSuccessText(int copiedCount)
+        => "Copied " + copiedCount.ToString() + " subjects to the clipboard.";
+
+    public static string CopySubjectsFailureText()
+        => "Could not copy subjects to the clipboard. Copy them from the text above instead.";
+
+    public static string CopySubjectsNothingToCopyText()
+        => "No subjects to copy.";
+
     public static string LicenseText(InternetArchiveItemMetadata metadata)
     {
         if (string.IsNullOrWhiteSpace(metadata.LicenseUrl))

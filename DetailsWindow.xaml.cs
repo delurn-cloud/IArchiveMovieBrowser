@@ -147,6 +147,115 @@ namespace IArchiveMovieBrowser
             ShowDetailsPreviewLoading();
         }
 
+        // --- Subjects presentation ------------------------------------------------------
+        //
+        // A bounded preview keeps a pathological subject list from overwhelming the view, while the
+        // complete original list stays reachable through Show all and Copy subjects. This is purely
+        // presentational: nothing here filters search, alters metadata, or hides an entry permanently.
+
+        private IReadOnlyList<string>? _subjects;
+
+        /// <summary>
+        /// Collapsed height of the Subjects list, and the expanded height. Both are bounded so the
+        /// list never grows tall enough to push Show all / Show fewer / Copy subjects out of view.
+        /// Expanded is taller so more entries are visible at once, but it is still bounded.
+        /// </summary>
+        private const double SubjectsCollapsedMaxHeight = 130;
+
+        private const double SubjectsExpandedMaxHeight = 260;
+
+        private void ApplySubjects(IReadOnlyList<string>? subjects)
+        {
+            _subjects = subjects;
+
+            // A refresh returns the list to the collapsed preview.
+            SubjectsToggleButton.IsChecked = false;
+
+            int hidden = DetailsDisplayText.SubjectsHiddenCount(subjects);
+            CopySubjectsButton.IsEnabled = DetailsDisplayText.SubjectsTotalCount(subjects) > 0;
+            CopySubjectsStatusText.Text = "";
+
+            RenderSubjects();
+            UpdateSubjectsNotice(hidden);
+        }
+
+        private void RenderSubjects()
+        {
+            IReadOnlyList<string>? subjects = _subjects;
+
+            if (SubjectsToggleButton.IsChecked == true)
+            {
+                // Expanded: every entry, one per row, in its own bounded scrollable list. Bounding
+                // BOTH states is what keeps the Show fewer button reachable.
+                SubjectsList.ItemsSource = DetailsDisplayText.NonBlankSubjects(subjects);
+                SubjectsList.MaxHeight = SubjectsExpandedMaxHeight;
+            }
+            else
+            {
+                // Collapsed: the first entries only, still one per row.
+                SubjectsList.ItemsSource =
+                    DetailsDisplayText.SubjectsPreview(subjects, DetailsDisplayText.SubjectsPreviewLimit);
+                SubjectsList.MaxHeight = SubjectsCollapsedMaxHeight;
+            }
+        }
+
+        /// <summary>
+        /// Discloses truncation as plain text. Never color alone. The count always reports actual
+        /// entries beyond the preview limit.
+        /// </summary>
+        private void UpdateSubjectsNotice(int hiddenCount)
+        {
+            string notice = DetailsDisplayText.SubjectsHiddenCountText(hiddenCount);
+
+            SubjectsNoticeText.Text = notice;
+            SubjectsNoticeText.Visibility = notice.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void OnSubjectsToggleClick(object sender, RoutedEventArgs e)
+        {
+            bool expanded = SubjectsToggleButton.IsChecked == true;
+            SubjectsToggleButton.Content = expanded
+                ? DetailsDisplayText.ShowFewerSubjectsLabel
+                : DetailsDisplayText.ShowAllSubjectsLabel;
+
+            RenderSubjects();
+            UpdateSubjectsNotice(DetailsDisplayText.SubjectsHiddenCount(_subjects));
+        }
+
+        private void OnCopySubjectsClick(object sender, RoutedEventArgs e)
+        {
+            IReadOnlyList<string>? subjects = _subjects;
+            int count = DetailsDisplayText.SubjectsTotalCount(subjects);
+
+            if (count == 0)
+            {
+                CopySubjectsStatusText.Text = DetailsDisplayText.CopySubjectsNothingToCopyText();
+                return;
+            }
+
+            // The complete original list, one entry per line — never just the visible preview.
+            string payload = DetailsDisplayText.SubjectsCopyPayload(subjects);
+
+            try
+            {
+                System.Windows.Clipboard.SetText(payload);
+                CopySubjectsStatusText.Text = DetailsDisplayText.CopySubjectsSuccessText(count);
+            }
+            catch (System.Runtime.InteropServices.ExternalException)
+            {
+                // Expected: Clipboard.SetText reports contention and COM-level refusals as
+                // ExternalException (COMException derives from it) when another process holds the
+                // clipboard open. Report in plain text; the full list stays readable on screen.
+                CopySubjectsStatusText.Text = DetailsDisplayText.CopySubjectsFailureText();
+            }
+            catch (ThreadStateException)
+            {
+                // Expected: raised when the clipboard is touched off an STA thread. Same plain-text
+                // outcome rather than an unhandled UI exception.
+                CopySubjectsStatusText.Text = DetailsDisplayText.CopySubjectsFailureText();
+            }
+        }
+
         private void ShowMetadata(InternetArchiveItemMetadata metadata)
         {
             TitleText.Text = DetailsDisplayText.TitleText(metadata);
@@ -155,7 +264,7 @@ namespace IArchiveMovieBrowser
             DateYearText.Text = "Date / Year: " + DetailsDisplayText.DateYearText(metadata);
             MediaTypeText.Text = "Media type: " + DetailsDisplayText.MediaTypeText(metadata);
             CollectionsText.Text = "Collections: " + DetailsDisplayText.JoinedText(metadata.Collections);
-            SubjectsText.Text = "Subjects: " + DetailsDisplayText.JoinedText(metadata.Subjects);
+            ApplySubjects(metadata.Subjects);
             LicenseText.Text = "License: " + DetailsDisplayText.LicenseText(metadata);
             DescriptionText.Text = DetailsDisplayText.DescriptionText(metadata.Description);
 

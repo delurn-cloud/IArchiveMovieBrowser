@@ -177,20 +177,249 @@ public static class SearchDisplayText
         "Optionally narrow results by a name or organization in Internet Archive creator metadata, " +
         "such as a director, producer, studio, uploader, or curator. This does not search actors or cast.";
 
+    // --- Discovery filters (keywords, collections, ordering) ---------------------------
+
+    /// <summary>Visible label for the keyword box.</summary>
+    public const string KeywordsLabel = "Keywords";
+
+    /// <summary>Visible label for the excluded-terms box.</summary>
+    public const string ExcludeWordsLabel = "Exclude words";
+
+    /// <summary>Visible label for the keyword-field selection combo.</summary>
+    public const string KeywordFieldsCaption = "Search in";
+
+    /// <summary>Visible label for the keyword match-mode combo.</summary>
+    public const string MatchModeCaption = "Match";
+
+    /// <summary>Visible label for the video-collection combo.</summary>
+    public const string VideoCollectionsCaption = "Video collections";
+
+    /// <summary>Visible label for the ordering combo.</summary>
+    public const string OrderingCaption = "Order by";
+
+    /// <summary>Visible label for the action that resets every Narrow results control.</summary>
+    public const string ClearAllFiltersLabel = "Clear all filters";
+
+    public const string SubjectsFieldsLabel = "Subjects";
+    public const string SubjectsAndDescriptionsFieldsLabel = "Subjects and descriptions";
+
+    public const string AllTermsMatchModeLabel = "All terms";
+    public const string AnyTermsMatchModeLabel = "Any terms";
+    public const string ExactPhraseMatchModeLabel = "Exact phrase";
+
+    public const string AllWatchableVideoLabel = "All watchable video";
+    public const string TelevisionCollectionsLabel = "TV collections";
+    public const string ExcludeKnownTelevisionCollectionsLabel = "Exclude known TV collections";
+
+    public const string InternetArchiveDefaultOrderingLabel = "Internet Archive default";
+    public const string MostDownloadedOrderingLabel = "Most downloaded";
+
+    /// <summary>Automation name for the text-based filter validation/guidance message.</summary>
+    public const string FilterMessageAutomationName = "Filter message";
+
+    /// <summary>
+    /// Shared grammar help for both the keyword and excluded-terms boxes. States the delimiters, the
+    /// quoted-phrase rule, that an unmatched quote is rejected rather than reinterpreted, and that a
+    /// multiword name or phrase should be quoted to search the words together rather than separately.
+    /// </summary>
+    public const string PhraseGrammarHelp =
+        "Separate terms with spaces or commas. Put a phrase in double quotes to search those words " +
+        "together, for example \"country house\" or \"Agatha Christie\" — without the quotes, each " +
+        "word is matched separately anywhere in the item's metadata. A quote must enclose a whole " +
+        "phrase: an unmatched quote, a quote inside a word, text right after a closing quote, and " +
+        "an empty \"\" are all rejected, and the search will not run until you fix them. Excluded " +
+        "words use the same rules and always exclude every term you list.";
+
+    /// <summary>Help for the keyword field selection combo, including the incidental-match warning.</summary>
+    public const string KeywordFieldsHelp =
+        "Subjects searches the Internet Archive subject field, which is a short controlled list of " +
+        "descriptive words an uploader chose. Subjects and descriptions also searches the free-text " +
+        "description, which finds more material but also matches books, newspapers, and unrelated " +
+        "uploads whose prose happens to mention the words. Neither option checks that a keyword " +
+        "really describes a film: these matches are incidental, drawn from whatever the uploader " +
+        "recorded, and the same words can appear for unrelated reasons.";
+
+    /// <summary>Help for the match-mode combo.</summary>
+    public const string MatchModeHelp =
+        "All terms requires every term you list to match. Any terms requires at least one. Exact " +
+        "phrase treats your whole entry as a single phrase and ignores the separators, which is the " +
+        "same result as putting the whole entry in one pair of double quotes.";
+
+    /// <summary>
+    /// Help for the video-collection combo. Discloses plainly that these are collection-based labels
+    /// and not a dependable movies-versus-television classification, and that the primary Search
+    /// scope still controls media type.
+    /// </summary>
+    public const string VideoCollectionsHelp =
+        "The Internet Archive has no separate television media type: television episodes are filed as " +
+        "video and can only be recognised by the collections they belong to. TV collections keeps " +
+        "items filed in the best-known television collections. Exclude known TV collections removes " +
+        "items in those collections. Neither is exact: some television sits in other collections, " +
+        "and some non-television items sit in these, so this is not a complete Movies-only or " +
+        "Television-only separation. These options only narrow collections — your Search scope " +
+        "choice still decides whether non-video items are included at all.";
+
+    /// <summary>
+    /// Help for the ordering combo. States the limitation honestly: the tiebreaker makes equal
+    /// download counts order consistently within one search, but paging is not a frozen snapshot.
+    /// </summary>
+    public const string OrderingHelp =
+        "Internet Archive default uses the Internet Archive's own ordering, which is not ranked by " +
+        "relevance. Most downloaded lists the most-downloaded items first. Items with equal download " +
+        "counts are then ordered by identifier, so they appear in a consistent order. This is not a " +
+        "frozen snapshot: results can still shift between pages if items are added, removed, or " +
+        "change download count while you page.";
+
+    /// <summary>
+    /// Guidance for the year control. Pre-existing limitation, restated here because it silently
+    /// excludes matches when applied: only a minority of sampled items carry a year value.
+    /// </summary>
+    public const string YearCoverageHelpSuffix =
+        " Internet Archive metadata is incomplete: many matching items carry no year value at all, " +
+        "so adding a year quietly excludes them.";
+
+    /// <summary>Ordered keyword-field options; Subjects first, so it is the default.</summary>
+    public static IReadOnlyList<SearchKeywordFields> KeywordFieldOptions()
+    {
+        return new List<SearchKeywordFields>
+        {
+            SearchKeywordFields.Subjects,
+            SearchKeywordFields.SubjectsAndDescriptions
+        };
+    }
+
+    /// <summary>Ordered match-mode options; All terms first, so it is the default.</summary>
+    public static IReadOnlyList<SearchKeywordMatchMode> MatchModeOptions()
+    {
+        return new List<SearchKeywordMatchMode>
+        {
+            SearchKeywordMatchMode.AllTerms,
+            SearchKeywordMatchMode.AnyTerms,
+            SearchKeywordMatchMode.ExactPhrase
+        };
+    }
+
+    /// <summary>Ordered video-collection options; All watchable video first, so it is the default.</summary>
+    public static IReadOnlyList<VideoCollectionScope> VideoCollectionOptions()
+    {
+        return new List<VideoCollectionScope>
+        {
+            VideoCollectionScope.AllWatchableVideo,
+            VideoCollectionScope.TelevisionCollections,
+            VideoCollectionScope.ExcludeKnownTelevisionCollections
+        };
+    }
+
+    /// <summary>Ordered ordering options; Internet Archive default first, so it is the default.</summary>
+    public static IReadOnlyList<SearchOrdering> OrderingOptions()
+    {
+        return new List<SearchOrdering>
+        {
+            SearchOrdering.InternetArchiveDefault,
+            SearchOrdering.MostDownloaded
+        };
+    }
+
+    public static string KeywordFieldsLabel(SearchKeywordFields fields)
+    {
+        return fields == SearchKeywordFields.SubjectsAndDescriptions
+            ? SubjectsAndDescriptionsFieldsLabel
+            : SubjectsFieldsLabel;
+    }
+
+    public static string MatchModeLabel(SearchKeywordMatchMode mode)
+    {
+        return mode switch
+        {
+            SearchKeywordMatchMode.AnyTerms => AnyTermsMatchModeLabel,
+            SearchKeywordMatchMode.ExactPhrase => ExactPhraseMatchModeLabel,
+            _ => AllTermsMatchModeLabel
+        };
+    }
+
+    public static string VideoCollectionsLabel(VideoCollectionScope scope)
+    {
+        return scope switch
+        {
+            VideoCollectionScope.TelevisionCollections => TelevisionCollectionsLabel,
+            VideoCollectionScope.ExcludeKnownTelevisionCollections => ExcludeKnownTelevisionCollectionsLabel,
+            _ => AllWatchableVideoLabel
+        };
+    }
+
+    public static string OrderingLabel(SearchOrdering ordering)
+    {
+        return ordering == SearchOrdering.MostDownloaded
+            ? MostDownloadedOrderingLabel
+            : InternetArchiveDefaultOrderingLabel;
+    }
+
+    /// <summary>
+    /// A clear, corrective validation message naming the offending box and what to change. The entry
+    /// is never silently reinterpreted, so the message always describes an action the user can take.
+    /// </summary>
+    public static string KeywordEntryErrorText(string boxLabel, SearchKeywordParseError error)
+    {
+        string box = string.IsNullOrWhiteSpace(boxLabel) ? "Keywords" : boxLabel.Trim();
+        return box + ": " + (error switch
+        {
+            SearchKeywordParseError.UnterminatedQuote =>
+                "a quote is missing its closing partner. Add the closing quote, or remove the opening quote.",
+            SearchKeywordParseError.EmptyQuotedPhrase =>
+                "an empty \"\" quoted phrase has no text to search. Put words between the quotes, or remove them.",
+            SearchKeywordParseError.EmbeddedQuote =>
+                "a quote appears inside a word. Quotes must enclose a whole phrase, for example \"country house\".",
+            SearchKeywordParseError.TextAfterClosingQuote =>
+                "text follows a closing quote. Put a space or comma after the closing quote, or quote the whole phrase.",
+            SearchKeywordParseError.UnexpectedQuoteInPhrase =>
+                "a quote character is not allowed here. Quotes must enclose the whole phrase and cannot be nested or escaped.",
+            _ => "the entry could not be read."
+        });
+    }
+
+    /// <summary>
+    /// One-line active-state disclosure for the discovery filters, used by the section header and by
+    /// assistive technology. Plain text, never color alone.
+    /// </summary>
+    public static string DiscoverySectionHeader(int activeCount)
+    {
+        if (activeCount <= 0)
+        {
+            return "Discovery";
+        }
+
+        return "Discovery (" + activeCount + " set)";
+    }
+
     /// <summary>The Recent summary line used by the Search Results window.</summary>
     public static string QuerySummaryText(string query, long numFound, int page) =>
         "Query: \"" + query + "\"" + Separator + ResultsSummary(numFound, page);
 
     /// <summary>
-    /// Summary line for a completed search built from structured criteria. For a title search it
-    /// matches the legacy format exactly; for actor-only/year-only searches it shows a concise
-    /// description of the applied criteria instead of an empty title label.
+    /// Summary line for a completed search built from structured criteria. The legacy part is
+    /// produced exactly as before — for a title search it matches the legacy format exactly, and for
+    /// actor-only/year-only searches it shows a concise description of those criteria — and the
+    /// discovery segments are then <b>appended</b> to it. When no discovery dimension is active the
+    /// output is byte-identical to the previous behaviour.
     /// </summary>
     public static string QuerySummaryText(SearchCriteria criteria, long numFound, int page)
     {
+        string legacy = "Query: " + LegacyQueryLabel(criteria);
+        string discovery = DiscoverySummaryText(criteria);
+
+        string label = discovery.Length == 0 ? legacy : legacy + ", " + discovery;
+        return label + Separator + ResultsSummary(numFound, page);
+    }
+
+    /// <summary>
+    /// The legacy query label: the quoted title, or a concise actor/year description. Extracted so
+    /// the discovery segments can be appended without altering any existing wording.
+    /// </summary>
+    private static string LegacyQueryLabel(SearchCriteria criteria)
+    {
         if (!string.IsNullOrWhiteSpace(criteria.Title))
         {
-            return QuerySummaryText(criteria.Title!, numFound, page);
+            return "\"" + criteria.Title + "\"";
         }
 
         var parts = new List<string>();
@@ -204,8 +433,74 @@ public static class SearchDisplayText
             parts.Add(yearSummary);
         }
 
-        string label = parts.Count == 0 ? "criteria" : string.Join(", ", parts);
-        return "Query: " + label + Separator + ResultsSummary(numFound, page);
+        return parts.Count == 0 ? "criteria" : string.Join(", ", parts);
+    }
+
+    /// <summary>
+    /// The appended discovery segments, or an empty string when no discovery dimension is active.
+    /// Only non-default choices are described, so a default-valued criteria adds nothing.
+    /// </summary>
+    public static string DiscoverySummaryText(SearchCriteria criteria)
+    {
+        var segments = new List<string>();
+
+        if (criteria.Keywords is not null && criteria.Keywords.Count > 0)
+        {
+            segments.Add("keywords " + QuotedTerms(criteria.Keywords)
+                + " (" + MatchModeLabel(criteria.MatchMode)
+                + ", " + KeywordFieldsLabel(criteria.KeywordFields) + ")");
+        }
+
+        if (criteria.ExcludedTerms is not null && criteria.ExcludedTerms.Count > 0)
+        {
+            segments.Add("excluding " + QuotedTerms(criteria.ExcludedTerms));
+        }
+
+        if (criteria.VideoCollections != VideoCollectionScope.AllWatchableVideo)
+        {
+            segments.Add(VideoCollectionsLabel(criteria.VideoCollections));
+        }
+
+        if (criteria.Ordering != SearchOrdering.InternetArchiveDefault)
+        {
+            segments.Add("ordered by " + OrderingLabel(criteria.Ordering));
+        }
+
+        return string.Join("; ", segments);
+    }
+
+    /// <summary>Number of discovery dimensions currently set, for the section-header disclosure.</summary>
+    public static int ActiveDiscoveryCount(SearchCriteria criteria)
+    {
+        int count = 0;
+        if (criteria.Keywords is not null && criteria.Keywords.Count > 0)
+        {
+            count++;
+        }
+        if (criteria.ExcludedTerms is not null && criteria.ExcludedTerms.Count > 0)
+        {
+            count++;
+        }
+        if (criteria.VideoCollections != VideoCollectionScope.AllWatchableVideo)
+        {
+            count++;
+        }
+        if (criteria.Ordering != SearchOrdering.InternetArchiveDefault)
+        {
+            count++;
+        }
+        return count;
+    }
+
+    /// <summary>Joins terms for display, quoting any term that contains a space.</summary>
+    private static string QuotedTerms(IReadOnlyList<string> terms)
+    {
+        var parts = new List<string>();
+        foreach (string term in terms)
+        {
+            parts.Add(term.IndexOf(' ') >= 0 ? "\"" + term + "\"" : term);
+        }
+        return string.Join(", ", parts);
     }
 
     /// <summary>

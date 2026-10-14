@@ -27,10 +27,14 @@ public static class SearchScopeQueryBuilder
     }
 
     /// <summary>
-    /// Returns the advanced-search <c>q</c> expression for the given criteria. Clauses are
-    /// emitted deterministically as: <c>title:</c> phrase, <c>creator:</c> tokenized keyword
-    /// clause, <c>year:</c> value, then the scope condition, each joined with an uppercase
-    /// <c>AND</c>.
+    /// Returns the advanced-search <c>q</c> expression for the given criteria. Clauses are emitted
+    /// deterministically in this fixed order, each joined with an uppercase <c>AND</c>:
+    /// <c>title:</c> phrase, keyword group, excluded-term clauses, <c>creator:</c> tokenized
+    /// keyword clause, <c>year:</c> value, genre <c>OR</c> group, television-collection clause, the
+    /// fixed trailer exclusion, then the scope condition.
+    ///
+    /// The order is fixed (not dependent on which control the user touched last) so the emitted
+    /// query is deterministic and therefore assertable in tests.
     /// </summary>
     public static string BuildQuery(SearchCriteria criteria)
     {
@@ -42,7 +46,7 @@ public static class SearchScopeQueryBuilder
         };
     }
 
-    /// <summary>Joins the title / creator / year clauses with " AND " in fixed order.</summary>
+    /// <summary>Joins every clause in the fixed documented order with " AND ".</summary>
     private static string BuildClauseList(SearchCriteria criteria)
     {
         string parts = "";
@@ -51,6 +55,28 @@ public static class SearchScopeQueryBuilder
         if (!string.IsNullOrWhiteSpace(criteria.Title))
         {
             parts = parts + "title:\"" + EscapeLiteral(criteria.Title) + "\"";
+            first = false;
+        }
+
+        string keywordClause = BuildKeywordClause(criteria.Keywords, criteria.KeywordFields, criteria.MatchMode);
+        if (keywordClause.Length > 0)
+        {
+            if (!first)
+            {
+                parts = parts + " AND ";
+            }
+            parts = parts + keywordClause;
+            first = false;
+        }
+
+        string exclusionClause = BuildExclusionClause(criteria.ExcludedTerms, criteria.KeywordFields);
+        if (exclusionClause.Length > 0)
+        {
+            if (!first)
+            {
+                parts = parts + " AND ";
+            }
+            parts = parts + exclusionClause;
             first = false;
         }
 
@@ -84,6 +110,17 @@ public static class SearchScopeQueryBuilder
             first = false;
         }
 
+        string collectionClause = BuildVideoCollectionClause(criteria.VideoCollections);
+        if (collectionClause.Length > 0)
+        {
+            if (!first)
+            {
+                parts = parts + " AND ";
+            }
+            parts = parts + collectionClause;
+            first = false;
+        }
+
         if (criteria.ExcludeTrailers)
         {
             if (!first)
@@ -95,6 +132,160 @@ public static class SearchScopeQueryBuilder
         }
 
         return parts;
+    }
+
+    /// <summary>
+    /// Builds the positive keyword clause from already-parsed literal terms.
+    ///
+    /// <para>Each term becomes a quoted literal field phrase. With
+    /// <see cref="SearchKeywordFields.SubjectsAndDescriptions"/> the term is OR-ed across the
+    /// selected fields and that inner OR is parenthesized, because it must stay a single term group
+    /// before the terms are combined.</para>
+    ///
+    /// <para>Terms are combined with an app-controlled uppercase <c>AND</c> or <c>OR</c> in a
+    /// parenthesized group. A single term emits no redundant outer parentheses — except that a
+    /// multi-field term still carries the parentheses its inner OR requires.</para>
+    ///
+    /// <para><see cref="SearchKeywordMatchMode.ExactPhrase"/> needs no separate handling here: the
+    /// parser has already collapsed the whole entry into a single term, which is exactly what this
+    /// method emits. It is therefore joined with <c>AND</c> defensively, as a single-term group.</para>
+    ///
+    /// <para>There is no synonym expansion and no automatic broadening of any kind.</para>
+    /// </summary>
+    private static string BuildKeywordClause(
+        IReadOnlyList<string> terms,
+        SearchKeywordFields fields,
+        SearchKeywordMatchMode mode)
+    {
+        if (terms is null || terms.Count == 0)
+        {
+            return "";
+        }
+
+        string op = mode == SearchKeywordMatchMode.AnyTerms ? " OR " : " AND ";
+
+        string group = "";
+        bool first = true;
+        foreach (string term in terms)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+            {
+                continue; // a blank term is never emitted as an empty literal
+            }
+
+            if (!first)
+            {
+                group = group + op;
+            }
+            group = group + BuildTermClause(term, fields);
+            first = false;
+        }
+
+        if (group.Length == 0)
+        {
+            return "";
+        }
+
+        return terms.Count <= 1 ? group : "(" + group + ")";
+    }
+
+    /// <summary>
+    /// Builds one term's clause: a quoted literal per targeted field, OR-ed and parenthesized when
+    /// more than one field is selected.
+    /// </summary>
+    private static string BuildTermClause(string term, SearchKeywordFields fields)
+    {
+        string literal = EscapeLiteral(term);
+        IReadOnlyList<string> fieldNames = SearchDiscoveryCatalog.KeywordFieldsFor(fields);
+
+        string clause = "";
+        bool first = true;
+        foreach (string field in fieldNames)
+        {
+            if (!first)
+            {
+                clause = clause + " OR ";
+            }
+            clause = clause + field + ":\"" + literal + "\"";
+            first = false;
+        }
+
+        return fieldNames.Count <= 1 ? clause : "(" + clause + ")";
+    }
+
+    /// <summary>
+    /// Builds the excluded-term clauses. Every term is negated and joined with <c>AND</c>, so an item
+    /// must match <b>none</b> of the excluded terms. A <c>NOT (a OR b)</c> group is deliberately
+    /// never emitted: it would be a no-op that widens results rather than narrowing them.
+    ///
+    /// With a multi-field selection the negation wraps the per-field OR, because the item must be
+    /// excluded when the term matches in <b>either</b> selected field.
+    /// </summary>
+    private static string BuildExclusionClause(
+        IReadOnlyList<string> terms,
+        SearchKeywordFields fields)
+    {
+        if (terms is null || terms.Count == 0)
+        {
+            return "";
+        }
+
+        string group = "";
+        bool first = true;
+        foreach (string term in terms)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+            {
+                continue;
+            }
+
+            if (!first)
+            {
+                group = group + " AND ";
+            }
+
+            group = group + "NOT " + BuildTermClause(term, fields);
+            first = false;
+        }
+
+        return group;
+    }
+
+    /// <summary>
+    /// Builds the television-collection clause from the fixed curated collection set in
+    /// <see cref="SearchDiscoveryCatalog"/>. The include variant is an <c>OR</c> group over that set
+    /// (an item in any one of them qualifies); the exclude variant negates each member joined with
+    /// <c>AND</c>. <see cref="VideoCollectionScope.AllWatchableVideo"/> emits nothing.
+    ///
+    /// These are collection-based labels, not a dependable movies-versus-television classification:
+    /// the Internet Archive has no <c>mediatype:television</c>, and the separation leaks in both
+    /// directions.
+    /// </summary>
+    private static string BuildVideoCollectionClause(VideoCollectionScope videoCollections)
+    {
+        if (videoCollections == VideoCollectionScope.AllWatchableVideo)
+        {
+            return "";
+        }
+
+        IReadOnlyList<string> collections = SearchDiscoveryCatalog.TelevisionCollections();
+        bool including = videoCollections == VideoCollectionScope.TelevisionCollections;
+
+        string group = "";
+        bool first = true;
+        foreach (string collection in collections)
+        {
+            if (!first)
+            {
+                group = group + (including ? " OR " : " AND ");
+            }
+
+            group = group + (including ? "" : "NOT ")
+                + SearchDiscoveryCatalog.CollectionField + ":" + collection;
+            first = false;
+        }
+
+        return including ? "(" + group + ")" : group;
     }
 
     /// <summary>

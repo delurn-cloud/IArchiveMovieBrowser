@@ -36,10 +36,40 @@ After using it myself, I thought it might also be useful to other people who pre
 ### Narrow results
 Expand **Narrow results** from the main window to refine a search:
 
+- **Keywords** — narrow by descriptive words or phrases in Internet Archive metadata. Separate terms with spaces or commas. Quote a phrase to search those words together, for example `"country house"` or `"Agatha Christie"`. Keywords on their own are enough to run a search.
+- **Search in** — choose **Subjects** (the default; the short controlled vocabulary an uploader chose) or **Subjects and descriptions** (also searches free-text description, which finds more but also matches unrelated uploads). See below.
+- **Match** — **All terms** (every term must match), **Any terms** (at least one), or **Exact phrase** (the whole entry is one phrase).
+- **Exclude words** — hide items whose metadata contains any of the listed words or phrases. Uses the same quoting rules as **Keywords**, and always excludes every term you list. Excluded words on their own are enough to run a search.
+- **Video collections** — optional television-collection narrowing. See below.
+- **Order by** — **Internet Archive default** or **Most downloaded**. See below.
 - **Made by / credited to** — narrow by a name or organization in Internet Archive creator metadata, such as a director, producer, studio, uploader, or curator. This does not search actors or cast.
 - **Year** — filter by an exact year or a year range (From / To).
 - **Genre** — choose one or more of the curated checklist. Clearing the selection removes the genre constraint with **Clear genres**.
 - **Exclude trailers** — off by default; removes trailer entries. See below before enabling it.
+- **Clear all filters** — resets every filter in this section to its default. Your main search text and **Search scope** choice are kept. It does not start a search.
+
+An **active-filter** line appears next to **Clear all filters**, reporting which of the new filters are set as plain text.
+
+### Keywords and phrase entry
+- Keywords are matched **literally**. There is no synonym expansion, stemming, or automatic broadening of any kind.
+- In **Subjects** mode each term is matched against the Internet Archive `subject` field, which is a multi-valued list. Entering `country house` unquoted matches items carrying *each word anywhere* in that list — **broader than the phrase**. Entering `"country house"` matches the phrase.
+- In **Exact phrase** mode the whole entry is one phrase, so `Agatha Christie` behaves the same as `"Agatha Christie"`. Internal commas are literal.
+- A quote must enclose a **whole phrase**. An unmatched quote, a quote inside a word (`un"quoted`), text immediately after a closing quote (`"a"b`), and an empty `""` are **rejected**. The search does not run until you fix them, and the entry is never silently reinterpreted as a different search. Quotes do not nest, and there is no quote-escape syntax.
+- **Exclude words** uses the same rules and the same rejections.
+- In **Subjects and descriptions** mode each term is matched against `subject` **or** `description`, then **All**/**Any** combines the per-term groups. Because `description` is unstructured free text, this matches more material — including books, newspapers, and unrelated uploads whose prose happens to mention the words.
+
+### Video collections
+- The Internet Archive has **no separate television media type**: television episodes and series are filed as video and can only be recognised by the **collections** they belong to. These options therefore narrow collections:
+  - **All watchable video** — the default; adds no collection restriction at all, and includes television.
+  - **TV collections** — keeps items filed in the best-known television collections (`television`, `classic_tv`, `television_inbox`); an item in any one of them qualifies.
+  - **Exclude known TV collections** — removes items in those collections.
+- **This is not a dependable Movies-only / Television-only split.** Some television sits in other collections (including user-favourite ones), and some non-television items sit in these, so the separation leaks in both directions. It is a best-known-collection filter, not a classification.
+- These options only narrow **collections**. Your **Search scope** choice still decides whether non-video items are included at all.
+
+### Order by
+- **Internet Archive default** (the default) uses the Internet Archive's own ordering. It is deliberately **not** called "Relevance", because its ranking semantics are not verified.
+- **Most downloaded** lists the most-downloaded items first. Items with equal download counts are then ordered by identifier, so they appear in a consistent order.
+- **This is not a frozen snapshot.** Results can still shift between pages if items are added, removed, or change download count while you page.
 
 ### Genre
 - The **Genre** checklist offers a fixed set of curated, user-facing choices such as Comedy, Documentary, Horror, and Science fiction.
@@ -55,7 +85,8 @@ Expand **Narrow results** from the main window to refine a search:
 
 ### Paging and Refresh
 - The Search Results window shows a result-count and current-page summary.
-- **Previous** and **Next** move between pages, and **Refresh** re-runs the current search. Genre, **Exclude trailers**, and the other narrow filters are retained across paging and Refresh.
+- **Previous** and **Next** move between pages, and **Refresh** re-runs the current search. Keywords, match mode, excluded words, video collections, **Order by**, Genre, **Exclude trailers**, and the other narrow filters are all retained across paging and Refresh.
+- Paging is **not** a frozen snapshot: the Internet Archive offers no stable result set, so results can shift between pages as items are added or removed.
 
 ### The Search Results window
 Searching from the main window opens a separate Search Results window listing the matching items, each showing its title along with available date/year and creator metadata. Select an item and choose **Open Details** to inspect it.
@@ -69,6 +100,8 @@ This screenshot will show a typical results list with the year/creator metadata,
 ## Details and playback
 
 Opening Details shows the item's facts (title, identifier, creator, date/year, media type, collections, subjects, and license when supplied), an Internet Archive image preview when one is available, and the item description.
+
+The **Subjects** block is bounded so a very large subject list cannot overwhelm the view: it shows the first **25** entries, one per row, in a short scrollable list, followed by a count of what is hidden (for example, "…and 3,466 more subjects"). Entries are shown individually rather than joined with commas, so a value containing a comma is never confused with the gap between two entries. Use **Show all** / **Show fewer** to expand or collapse the complete list — the list stays bounded and scrolls internally either way, so those buttons always remain in view — and **Copy subjects** to copy the **whole** list to the clipboard, one entry per line. The preview returns to collapsed when the item's metadata refreshes. This only changes presentation — no subject is hidden permanently, and nothing is filtered or deleted.
 
 The Details window also identifies **Playable video files** among the item's files and lists the full file inventory. Selecting a playable file shows:
 
@@ -115,17 +148,22 @@ Keep in mind:
 
 - Some items or files may be unavailable, access-restricted, missing, or unsuitable for a particular player.
 - Genre reflects curated choices mapped to Internet Archive `subject` metadata, not a universal movie taxonomy.
+- **Keywords** are literal and literal-only. A keyword match means an uploader recorded that text in the field; it is **not** a verified classification. Subject vocabulary is self-reported and inconsistent (`British`, `british`, `england`, `uk`, `British TV` can all coexist and refer to overlapping but non-identical sets), so keyword matches are **incidental** and can be correct for unrelated reasons.
+- **Country of production and cast are not dependable structured filters.** They are not offered as controls. `country` values are sparse (in the sample used for design, only a small fraction of video items carried any `country` value at all), and actor names appear in the same undifferentiated `subject` list as directors, composers, and topical subjects. Use them as keywords instead.
+- **Video collections** are collection-based labels, not a dependable Movies-only / Television-only split; see [Video collections](#video-collections).
+- **Year** filters exclude items that carry no year value at all, which is a large share of matches. Use it to narrow within a result set you already know is relevant, not as a first filter.
 - **Exclude trailers** depends on Internet Archive collection, subject, and title metadata, none of which is a canonical "is a trailer" flag. It therefore both misses some trailers and hides some full movies; see [Exclude trailers](#exclude-trailers).
 - The application does not authenticate, use stored credentials or cookies, or attempt to bypass any access restrictions.
 - The application is independent and is not affiliated with, endorsed by, or supported by the Internet Archive.
 
 ## How to use it
 
-1. In the main window, enter a title phrase and choose the desired **Search scope** (the default is **Watchable video**).
+1. In the main window, enter a title phrase and choose the desired **Search scope** (the default is **Watchable video**). You can also search using **Keywords** alone, without a title.
 2. Optionally expand **Narrow results**.
-3. Use **Made by / credited to**, **Year**, **Genre**, and optionally **Exclude trailers** to narrow the search.
-4. With **Genre**, you can select two or more choices; results can match any selected genre, not necessarily all of them. **Exclude trailers** is aggressive, so enable it only when you want trailers, mixed uploads, and titles containing the word "trailer" hidden.
-5. Run the search and open the results.
+3. Use **Keywords**, **Search in**, **Match**, **Exclude words**, **Video collections**, **Order by**, **Made by / credited to**, **Year**, **Genre**, and optionally **Exclude trailers** to narrow the search.
+4. Quote multiword keywords (`"country house"`) to search them together. If the app shows a filter message, the entry is not run — fix the quoted text it names and search again.
+5. With **Genre**, you can select two or more choices; results can match any selected genre, not necessarily all of them. **Exclude trailers** is aggressive, so enable it only when you want trailers, mixed uploads, and titles containing the word "trailer" hidden.
+6. Run the search and open the results.
 6. Select an item in the Search Results window and choose **Open Details**.
 7. In Details, select a **playable video file**.
 8. Do one of the following:

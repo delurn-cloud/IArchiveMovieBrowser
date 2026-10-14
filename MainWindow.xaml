@@ -101,6 +101,13 @@ You can enter part of a title to discover likely matches, then search again usin
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Grid.Column="0"
                            Text="Made by / credited to"
@@ -136,7 +143,7 @@ You can enter part of a title to discover likely matches, then search again usin
                                  Padding="6,3"
                                  FontSize="12"
                                  AutomationProperties.Name="Year from"
-                                 AutomationProperties.HelpText="Optional inclusive lower bound for an exact year or year range, exactly four digits from 1800 through the current year plus one."/>
+                                 AutomationProperties.HelpText="Optional inclusive lower bound for an exact year or year range, exactly four digits from 1800 through the current year plus one. Internet Archive metadata is incomplete: many matching items carry no year value at all, so adding a year quietly excludes them."/>
                     </StackPanel>
                     <TextBlock Text="to"
                                FontSize="12"
@@ -155,10 +162,144 @@ You can enter part of a title to discover likely matches, then search again usin
                                  Padding="6,3"
                                  FontSize="12"
                                  AutomationProperties.Name="Year to"
-                                 AutomationProperties.HelpText="Optional inclusive upper bound for an exact year or year range, exactly four digits from 1800 through the current year plus one. Must be at least Year from."/>
+                                 AutomationProperties.HelpText="Optional inclusive upper bound for an exact year or year range, exactly four digits from 1800 through the current year plus one. Must be at least Year from. Internet Archive metadata is incomplete: many matching items carry no year value at all, so adding a year quietly excludes them."/>
                     </StackPanel>
                 </StackPanel>
-<Expander Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+<TextBlock Grid.Row="2" Grid.Column="0"
+                           Text="Keywords"
+                           FontSize="12"
+                           Margin="0,6,8,0"
+                           VerticalAlignment="Top"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,4,0,0">
+                    <TextBox x:Name="KeywordsTextBox"
+                             MinWidth="120"
+                             MinHeight="26"
+                             Padding="6,4"
+                             FontSize="13"
+                             VerticalContentAlignment="Center"
+                             TextChanged="OnDiscoveryEntryChanged"
+                             AutomationProperties.Name="Keywords"
+                             AutomationProperties.HelpText="Optionally narrow results by descriptive words or phrases in Internet Archive metadata. Separate terms with spaces or commas. Quote a phrase to search those words together, for example &quot;country house&quot; or &quot;Agatha Christie&quot;. Keywords on their own are enough to run a search.">
+                        <TextBox.ToolTip>
+                            <ToolTip MaxWidth="380">
+                                <TextBlock MaxWidth="380" TextWrapping="Wrap"
+                                           Text="Optionally narrow results by descriptive words or phrases in Internet Archive metadata. Separate terms with spaces or commas. Quote a phrase to search those words together, for example &quot;country house&quot; or &quot;Agatha Christie&quot;. Keywords on their own are enough to run a search."/>
+                            </ToolTip>
+                        </TextBox.ToolTip>
+                    </TextBox>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="Search in"
+                                   FontSize="11"
+                                   Margin="0,0,4,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                        <ComboBox x:Name="KeywordFieldsCombo"
+                                  Width="168" Height="24"
+                                  SelectedIndex="0"
+                                  VerticalAlignment="Center"
+                                  AutomationProperties.Name="Search in"
+                                  AutomationProperties.HelpText="Subjects searches the Internet Archive subject field, which is a short controlled list of descriptive words an uploader chose. Subjects and descriptions also searches the free-text description, which finds more material but also matches books, newspapers, and unrelated uploads whose prose happens to mention the words. Neither option checks that a keyword really describes a film.">
+                            <ComboBox.ToolTip>
+                                <ToolTip MaxWidth="380">
+                                    <TextBlock MaxWidth="380" TextWrapping="Wrap"
+                                               Text="Subjects searches the Internet Archive subject field, which is a short controlled list of descriptive words an uploader chose. Subjects and descriptions also searches the free-text description, which finds more material but also matches books, newspapers, and unrelated uploads whose prose happens to mention the words. Neither option checks that a keyword really describes a film."/>
+                                </ToolTip>
+                            </ComboBox.ToolTip>
+                            <ComboBoxItem Content="Subjects"/>
+                            <ComboBoxItem Content="Subjects and descriptions"/>
+                        </ComboBox>
+                        <TextBlock Text="Match"
+                                   FontSize="11"
+                                   Margin="10,0,4,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                        <ComboBox x:Name="MatchModeCombo"
+                                  Width="104" Height="24"
+                                  SelectedIndex="0"
+                                  VerticalAlignment="Center"
+                                  AutomationProperties.Name="Match mode"
+                                  AutomationProperties.HelpText="All terms requires every term you list to match. Any terms requires at least one. Exact phrase treats your whole entry as a single phrase and ignores the separators, which is the same result as putting the whole entry in one pair of double quotes.">
+                            <ComboBox.ToolTip>
+                                <ToolTip MaxWidth="380">
+                                    <TextBlock MaxWidth="380" TextWrapping="Wrap"
+                                               Text="All terms requires every term you list to match. Any terms requires at least one. Exact phrase treats your whole entry as a single phrase and ignores the separators, which is the same result as putting the whole entry in one pair of double quotes."/>
+                                </ToolTip>
+                            </ComboBox.ToolTip>
+                            <ComboBoxItem Content="All terms"/>
+                            <ComboBoxItem Content="Any terms"/>
+                            <ComboBoxItem Content="Exact phrase"/>
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock Grid.Row="3" Grid.Column="0"
+                           Text="Exclude words"
+                           FontSize="12"
+                           Margin="0,6,8,0"
+                           VerticalAlignment="Top"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                <TextBox x:Name="ExcludedTermsTextBox"
+                         Grid.Row="3" Grid.Column="1"
+                         MinWidth="120"
+                         MinHeight="26"
+                         Margin="0,4,0,0"
+                         Padding="6,4"
+                         FontSize="13"
+                         VerticalContentAlignment="Center"
+                         TextChanged="OnDiscoveryEntryChanged"
+                         AutomationProperties.Name="Exclude words"
+                         AutomationProperties.HelpText="Optionally hide items whose metadata contains any of these words or phrases. Uses the same quoting rules as Keywords. Every term you list is excluded. Excluded words on their own are enough to run a search.">
+                    <TextBox.ToolTip>
+                        <ToolTip MaxWidth="380">
+                            <TextBlock MaxWidth="380" TextWrapping="Wrap"
+                                       Text="Optionally hide items whose metadata contains any of these words or phrases. Uses the same quoting rules as Keywords. Every term you list is excluded. Excluded words on their own are enough to run a search."/>
+                        </ToolTip>
+                    </TextBox.ToolTip>
+                </TextBox>
+                <TextBlock Grid.Row="4" Grid.Column="0"
+                           Text="Video collections"
+                           FontSize="12"
+                           Margin="0,6,8,0"
+                           VerticalAlignment="Center"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                <ComboBox x:Name="VideoCollectionsCombo"
+                          Grid.Row="4" Grid.Column="1"
+                          Height="24" Margin="0,4,0,0"
+                          SelectedIndex="0"
+                          AutomationProperties.Name="Video collections"
+                          AutomationProperties.HelpText="The Internet Archive has no separate television media type: television episodes are filed as video and can only be recognised by the collections they belong to. TV collections keeps items filed in the best-known television collections. Exclude known TV collections removes items in those collections. Neither is exact: some television sits in other collections, and some non-television items sit in these, so this is not a complete Movies-only or Television-only separation. These options only narrow collections — your Search scope choice still decides whether non-video items are included at all.">
+                    <ComboBox.ToolTip>
+                        <ToolTip MaxWidth="380">
+                            <TextBlock MaxWidth="380" TextWrapping="Wrap"
+                                       Text="The Internet Archive has no separate television media type: television episodes are filed as video and can only be recognised by the collections they belong to. TV collections keeps items filed in the best-known television collections. Exclude known TV collections removes items in those collections. Neither is exact: some television sits in other collections, and some non-television items sit in these, so this is not a complete Movies-only or Television-only separation. These options only narrow collections — your Search scope choice still decides whether non-video items are included at all."/>
+                        </ToolTip>
+                    </ComboBox.ToolTip>
+                    <ComboBoxItem Content="All watchable video"/>
+                    <ComboBoxItem Content="TV collections"/>
+                    <ComboBoxItem Content="Exclude known TV collections"/>
+                </ComboBox>
+                <TextBlock Grid.Row="5" Grid.Column="0"
+                           Text="Order by"
+                           FontSize="12"
+                           Margin="0,6,8,0"
+                           VerticalAlignment="Center"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                <ComboBox x:Name="OrderingCombo"
+                          Grid.Row="5" Grid.Column="1"
+                          Height="24" Margin="0,4,0,0"
+                          SelectedIndex="0"
+                          AutomationProperties.Name="Order by"
+                          AutomationProperties.HelpText="Internet Archive default uses the Internet Archive's own ordering, which is not ranked by relevance. Most downloaded lists the most-downloaded items first. Items with equal download counts are then ordered by identifier, so they appear in a consistent order. This is not a frozen snapshot: results can still shift between pages if items are added, removed, or change download count while you page.">
+                    <ComboBox.ToolTip>
+                        <ToolTip MaxWidth="380">
+                            <TextBlock MaxWidth="380" TextWrapping="Wrap"
+                                       Text="Internet Archive default uses the Internet Archive's own ordering, which is not ranked by relevance. Most downloaded lists the most-downloaded items first. Items with equal download counts are then ordered by identifier, so they appear in a consistent order. This is not a frozen snapshot: results can still shift between pages if items are added, removed, or change download count while you page."/>
+                        </ToolTip>
+                    </ComboBox.ToolTip>
+                    <ComboBoxItem Content="Internet Archive default"/>
+                    <ComboBoxItem Content="Most downloaded"/>
+                </ComboBox>
+                <Expander Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2"
                           x:Name="GenreExpander"
                           IsExpanded="False"
                           Margin="0,6,0,0"
@@ -243,7 +384,7 @@ You can enter part of a title to discover likely matches, then search again usin
                     </StackPanel>
                 </Expander>
                 <CheckBox x:Name="ExcludeTrailersCheckBox"
-                          Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                          Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"
                           Content="Exclude trailers"
                           Margin="0,10,0,2"
                           VerticalAlignment="Center"
@@ -257,6 +398,32 @@ You can enter part of a title to discover likely matches, then search again usin
                         </ToolTip>
                     </CheckBox.ToolTip>
                 </CheckBox>
+                <StackPanel Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2"
+                            Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button x:Name="ClearAllFiltersButton"
+                            Content="Clear all filters"
+                            Width="140" Height="30"
+                            HorizontalAlignment="Left"
+                            Click="OnClearAllFiltersClick"
+                            AutomationProperties.Name="Clear all filters"
+                            AutomationProperties.HelpText="Resets every filter in Narrow results to its default. Your main search text and Search scope choice are kept. Does not start a search."/>
+                    <TextBlock x:Name="DiscoveryStateText"
+                               Margin="10,0,0,0"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"
+                               Foreground="{x:Static SystemColors.ControlTextBrush}"
+                               AutomationProperties.Name="Active filters"/>
+                </StackPanel>
+                <TextBlock x:Name="FilterMessageText"
+                           Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="2"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           Margin="0,6,0,0"
+                           Visibility="Collapsed"
+                           Foreground="{x:Static SystemColors.ControlTextBrush}"
+                           AutomationProperties.Name="Filter message"
+                           AutomationProperties.LiveSetting="Assertive"/>
             </Grid>
         </Expander>
 

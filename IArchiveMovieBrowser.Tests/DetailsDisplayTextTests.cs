@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using IArchiveMovieBrowser.Domain;
 using IArchiveMovieBrowser.Services;
 using Xunit;
@@ -7,6 +9,235 @@ namespace IArchiveMovieBrowser.Tests;
 
 public sealed class DetailsDisplayTextTests
 {
+    // --- Subjects presentation -------------------------------------------------------
+    //
+    // Presentation only: the preview bounds what is INLINE, while the complete original list stays
+    // reachable through the expanded view and the clipboard payload. These tests pin that the
+    // complete list is never lost, never split, and never silently reordered.
+
+    private static List<string> Subjects(int count, string prefix = "subject")
+    {
+        var values = new List<string>(count);
+        for (int i = 0; i < count; i++)
+        {
+            values.Add(prefix + "-" + i.ToString());
+        }
+        return values;
+    }
+
+    [Fact]
+    public void Subjects_NullAndEmptyAreHandled()
+    {
+        Assert.Empty(DetailsDisplayText.SubjectsPreview(null));
+        Assert.Empty(DetailsDisplayText.SubjectsPreview(new List<string>()));
+        Assert.Equal(0, DetailsDisplayText.SubjectsTotalCount(null));
+        Assert.Equal(0, DetailsDisplayText.SubjectsHiddenCount(null));
+        Assert.Equal("", DetailsDisplayText.SubjectsFullText(null));
+        Assert.Equal("", DetailsDisplayText.SubjectsCopyPayload(null));
+        Assert.Equal("", DetailsDisplayText.SubjectsHiddenCountText(0));
+    }
+
+    [Fact]
+    public void Subjects_AllBlankInputIsHandled()
+    {
+        var blank = new List<string> { "", "   ", "\t", " \t " };
+
+        Assert.Empty(DetailsDisplayText.SubjectsPreview(blank));
+        Assert.Equal(0, DetailsDisplayText.SubjectsTotalCount(blank));
+        Assert.Equal(0, DetailsDisplayText.SubjectsHiddenCount(blank));
+        Assert.Equal("", DetailsDisplayText.SubjectsCopyPayload(blank));
+    }
+
+    [Fact]
+    public void Subjects_BlankEntriesAreIgnoredButRealOnesAreCounted()
+    {
+        var values = new List<string> { "british", "", "  ", "mystery", null! };
+
+        Assert.Equal(2, DetailsDisplayText.SubjectsTotalCount(values));
+        Assert.Equal(new[] { "british", "mystery" }, DetailsDisplayText.SubjectsPreview(values));
+        Assert.Equal("british\nmystery", DetailsDisplayText.SubjectsCopyPayload(values));
+    }
+
+    [Fact]
+    public void Subjects_ExactlyTheLimitIsNotShortened()
+    {
+        List<string> values = Subjects(DetailsDisplayText.SubjectsPreviewLimit);
+
+        Assert.Equal(25, DetailsDisplayText.SubjectsPreviewLimit);
+        Assert.Equal(25, DetailsDisplayText.SubjectsTotalCount(values));
+        Assert.Equal(0, DetailsDisplayText.SubjectsHiddenCount(values));
+        Assert.Equal("", DetailsDisplayText.SubjectsHiddenCountText(0));
+
+        // Every one of the 25 is in the preview, first and last.
+        Assert.Equal(25, DetailsDisplayText.SubjectsPreview(values).Count);
+        Assert.Equal("subject-0", DetailsDisplayText.SubjectsPreview(values)[0]);
+        Assert.Equal("subject-24", DetailsDisplayText.SubjectsPreview(values)[24]);
+    }
+
+    [Fact]
+    public void Subjects_OneOverTheLimitHidesExactlyOneEntry()
+    {
+        List<string> values = Subjects(DetailsDisplayText.SubjectsPreviewLimit + 1);
+
+        Assert.Equal(26, DetailsDisplayText.SubjectsTotalCount(values));
+        Assert.Equal(1, DetailsDisplayText.SubjectsHiddenCount(values));
+        Assert.Equal("…and 1 more subjects.", DetailsDisplayText.SubjectsHiddenCountText(1));
+
+        IReadOnlyList<string> preview = DetailsDisplayText.SubjectsPreview(values);
+        Assert.Equal(25, preview.Count);
+        Assert.Equal("subject-24", preview[24]);
+        Assert.DoesNotContain("subject-25", preview, StringComparer.Ordinal);
+
+        // The complete list still holds all 26, one per line.
+        Assert.Equal(26, DetailsDisplayText.SubjectsCopyPayload(values).Split('\n').Length);
+    }
+
+    [Fact]
+    public void Subjects_HiddenCountCountsActualEntriesNotCharacters()
+    {
+        List<string> values = Subjects(40, prefix: new string('x', 50));
+
+        Assert.Equal(40, DetailsDisplayText.SubjectsTotalCount(values));
+        Assert.Equal(15, DetailsDisplayText.SubjectsHiddenCount(values));
+        Assert.Equal("…and 15 more subjects.", DetailsDisplayText.SubjectsHiddenCountText(15));
+    }
+
+    [Fact]
+    public void Subjects_ASingleVeryLongEntryIsOneEntryAndIsNotSplit()
+    {
+        // One value containing commas and semicolons: it is ONE subject entry. Splitting it would
+        // manufacture entries the item does not have.
+        string huge = "word" + string.Join(";", Enumerable.Range(0, 400)) + ",trailing,phrase";
+        var values = new List<string> { "british", huge };
+
+        Assert.Equal(2, DetailsDisplayText.SubjectsTotalCount(values));
+        Assert.Equal(0, DetailsDisplayText.SubjectsHiddenCount(values));
+
+        // Shown whole inside the preview; the delimiters survive verbatim.
+        Assert.Equal(new[] { "british", huge }, DetailsDisplayText.SubjectsPreview(values));
+
+        // And it is exactly one line in the copy payload, not 400.
+        string[] lines = DetailsDisplayText.SubjectsCopyPayload(values).Split('\n');
+        Assert.Equal(2, lines.Length);
+        Assert.Equal(huge, lines[1]);
+    }
+
+    [Fact]
+    public void Subjects_ASingleVeryLongEntryStillCountsAsOneWhenOverTheLimit()
+    {
+        var values = Subjects(26);
+        values.Insert(0, new string('z', 5000));
+
+        Assert.Equal(27, DetailsDisplayText.SubjectsTotalCount(values));
+        Assert.Equal(2, DetailsDisplayText.SubjectsHiddenCount(values));
+        Assert.Equal("…and 2 more subjects.", DetailsDisplayText.SubjectsHiddenCountText(2));
+
+        // The long value is entry 1 and stays in the preview intact.
+        Assert.Equal(new string('z', 5000), DetailsDisplayText.SubjectsPreview(values)[0]);
+    }
+
+    [Fact]
+    public void Subjects_FullListPreservesOrderAndContentExactly()
+    {
+        var values = new List<string> { "zeta", "alpha", "Mixed Case", "with,comma", "with;semicolon", "  padded  " };
+
+        string full = DetailsDisplayText.SubjectsFullText(values);
+        string[] lines = full.Split('\n');
+
+        Assert.Equal(6, lines.Length);
+        Assert.Equal("zeta", lines[0]);
+        Assert.Equal("alpha", lines[1]);
+        Assert.Equal("Mixed Case", lines[2]);
+        Assert.Equal("with,comma", lines[3]);
+        Assert.Equal("with;semicolon", lines[4]);
+        Assert.Equal("  padded  ", lines[5]); // content preserved verbatim, not trimmed
+    }
+
+    [Fact]
+    public void Subjects_CopyPayloadIsTheCompleteListNotThePreview()
+    {
+        List<string> values = Subjects(300);
+
+        string payload = DetailsDisplayText.SubjectsCopyPayload(values);
+        string[] lines = payload.Split('\n');
+
+        Assert.Equal(300, lines.Length);            // complete list
+        Assert.Equal("subject-299", lines[299]);   // last entry present
+        Assert.Equal("subject-0", lines[0]);
+
+        // The preview is strictly smaller, proving copy did not fall back to it.
+        Assert.True(DetailsDisplayText.SubjectsPreview(values).Count < lines.Length);
+        Assert.Equal(275, DetailsDisplayText.SubjectsHiddenCount(values));
+    }
+
+    [Fact]
+    public void Subjects_CopyResultTextIsPlainAndCounted()
+    {
+        Assert.Equal("Copied 300 subjects to the clipboard.",
+            DetailsDisplayText.CopySubjectsSuccessText(300));
+        Assert.Contains("Could not copy", DetailsDisplayText.CopySubjectsFailureText(), StringComparison.Ordinal);
+        Assert.Equal("No subjects to copy.", DetailsDisplayText.CopySubjectsNothingToCopyText());
+    }
+
+    [Fact]
+    public void Subjects_ExpandedViewUsesTheSameEntriesAsTheCompleteList()
+    {
+        // The expanded list binds to NonBlankSubjects, so the rows on screen are exactly the lines
+        // the copy payload produces - no separate formatting, and nothing lost between the two.
+        var values = new List<string> { "News", "breakingnews", "12, tribe", "Mandela's", "Russian news" };
+
+        IReadOnlyList<string> expanded = DetailsDisplayText.NonBlankSubjects(values);
+        string[] copyLines = DetailsDisplayText.SubjectsCopyPayload(values).Split('\n');
+
+        Assert.Equal(copyLines.Length, expanded.Count);
+        for (int i = 0; i < copyLines.Length; i++)
+        {
+            Assert.Equal(copyLines[i], expanded[i]);
+        }
+
+        // Entries containing commas stay one row rather than being visually ambiguous when joined.
+        Assert.Equal("12, tribe", expanded[2]);
+    }
+
+    [Fact]
+    public void Subjects_ToggleLabelsAreDistinctAndPlainText()
+    {
+        Assert.Equal("Show all", DetailsDisplayText.ShowAllSubjectsLabel);
+        Assert.Equal("Show fewer", DetailsDisplayText.ShowFewerSubjectsLabel);
+        Assert.Equal("Copy subjects", DetailsDisplayText.CopySubjectsLabel);
+        Assert.NotEqual(DetailsDisplayText.ShowAllSubjectsLabel, DetailsDisplayText.ShowFewerSubjectsLabel);
+    }
+
+    [Fact]
+    public void Subjects_PreviewLimitAndLineTargetAreStable()
+    {
+        // The five-line target that the window turns into a concrete height.
+        Assert.Equal(5, DetailsDisplayText.SubjectsPreviewLines);
+    }
+
+    [Fact]
+    public void Subjects_CustomLimitIsRespected()
+    {
+        List<string> values = Subjects(10);
+
+        Assert.Equal(7, DetailsDisplayText.SubjectsHiddenCount(values, limit: 3));
+        Assert.Equal(10, DetailsDisplayText.SubjectsHiddenCount(values, limit: 0));
+        Assert.Equal(0, DetailsDisplayText.SubjectsHiddenCount(values, limit: 100));
+        Assert.Empty(DetailsDisplayText.SubjectsPreview(values, limit: 0));
+    }
+
+    [Fact]
+    public void Subjects_ExpandedViewAlwaysReproducesTheCompleteList()
+    {
+        List<string> values = Subjects(250);
+
+        // The expanded rendering is exactly SubjectsFullText: no preview limit applies, so no
+        // entry can be lost when the toggle is on.
+        Assert.Equal(string.Join("\n", values), DetailsDisplayText.SubjectsFullText(values));
+        Assert.Equal(
+            DetailsDisplayText.SubjectsFullText(values).Split('\n').Length,
+            DetailsDisplayText.SubjectsCopyPayload(values).Split('\n').Length);
+    }
     private static InternetArchiveItemMetadata Metadata(
         string? title,
         string? date,

@@ -46,6 +46,8 @@ namespace IArchiveMovieBrowser
             ResultStage.Visibility = Visibility.Collapsed;
             StatusText.Text = SearchDisplayText.EmptyQueryText();
             SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
+            ShowFilterMessage(null);
+            UpdateDiscoveryStateText();
 
             ApplyPlayerState(ExternalPlayerLogic.AnalyzeStoredPath(_playerStorage.Load()));
 
@@ -190,6 +192,151 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
             ExecuteSearchAsync();
         }
 
+        /// <summary>The currently selected keyword-field target from the launcher ComboBox.</summary>
+        private SearchKeywordFields SelectedKeywordFields()
+        {
+            int index = KeywordFieldsCombo.SelectedIndex;
+            IReadOnlyList<SearchKeywordFields> options = SearchDisplayText.KeywordFieldOptions();
+            if (index >= 0 && index < options.Count)
+            {
+                return options[index];
+            }
+            return SearchKeywordFields.Subjects;
+        }
+
+        /// <summary>The currently selected keyword match mode from the launcher ComboBox.</summary>
+        private SearchKeywordMatchMode SelectedMatchMode()
+        {
+            int index = MatchModeCombo.SelectedIndex;
+            IReadOnlyList<SearchKeywordMatchMode> options = SearchDisplayText.MatchModeOptions();
+            if (index >= 0 && index < options.Count)
+            {
+                return options[index];
+            }
+            return SearchKeywordMatchMode.AllTerms;
+        }
+
+        /// <summary>The currently selected television-collection narrowing from the launcher ComboBox.</summary>
+        private VideoCollectionScope SelectedVideoCollections()
+        {
+            int index = VideoCollectionsCombo.SelectedIndex;
+            IReadOnlyList<VideoCollectionScope> options = SearchDisplayText.VideoCollectionOptions();
+            if (index >= 0 && index < options.Count)
+            {
+                return options[index];
+            }
+            return VideoCollectionScope.AllWatchableVideo;
+        }
+
+        /// <summary>The currently selected result ordering from the launcher ComboBox.</summary>
+        private SearchOrdering SelectedOrdering()
+        {
+            int index = OrderingCombo.SelectedIndex;
+            IReadOnlyList<SearchOrdering> options = SearchDisplayText.OrderingOptions();
+            if (index >= 0 && index < options.Count)
+            {
+                return options[index];
+            }
+            return SearchOrdering.InternetArchiveDefault;
+        }
+
+        /// <summary>
+        /// Reports which discovery filters are currently set, as plain text next to Clear all filters.
+        /// Never color alone, so the active state is available to assistive technology and in
+        /// high-contrast rendering.
+        /// </summary>
+        private void UpdateDiscoveryStateText()
+        {
+            var active = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(KeywordsTextBox.Text))
+            {
+                active.Add(SearchDisplayText.KeywordsLabel);
+            }
+            if (!string.IsNullOrWhiteSpace(ExcludedTermsTextBox.Text))
+            {
+                active.Add(SearchDisplayText.ExcludeWordsLabel);
+            }
+
+            VideoCollectionScope collections = SelectedVideoCollections();
+            if (collections != VideoCollectionScope.AllWatchableVideo)
+            {
+                active.Add(SearchDisplayText.VideoCollectionsLabel(collections));
+            }
+
+            SearchOrdering ordering = SelectedOrdering();
+            if (ordering != SearchOrdering.InternetArchiveDefault)
+            {
+                active.Add(SearchDisplayText.OrderingLabel(ordering));
+            }
+
+            DiscoveryStateText.Text = active.Count == 0
+                ? ""
+                : SearchDisplayText.DiscoverySectionHeader(active.Count) + ": " + string.Join(", ", active);
+        }
+
+        /// <summary>
+        /// Shows or clears the text-based filter validation message. The message is always plain text
+        /// (never color alone) and is announced through an assertive live region.
+        /// </summary>
+        private void ShowFilterMessage(string? message)
+        {
+            if (string.IsNullOrEmpty(message))
+            {
+                FilterMessageText.Text = "";
+                FilterMessageText.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            FilterMessageText.Text = message!;
+            FilterMessageText.Visibility = Visibility.Visible;
+        }
+
+        /// <summary>
+        /// Clears the validation message as soon as the user edits a discovery entry, so a stale
+        /// correction is never left on screen next to corrected text.
+        /// </summary>
+        private void OnDiscoveryEntryChanged(object sender, TextChangedEventArgs e)
+        {
+            if (FilterMessageText.Visibility == Visibility.Visible)
+            {
+                ShowFilterMessage(null);
+            }
+
+            UpdateDiscoveryStateText();
+        }
+
+        /// <summary>
+        /// Resets every control inside Narrow results to its documented default. The primary-row
+        /// title and the primary search scope are deliberately preserved, because the scope is a
+        /// deliberate "how wide is the catalogue" choice rather than a narrowing filter.
+        ///
+        /// This issues no request, does not auto-submit, and is idempotent.
+        /// </summary>
+        private void OnClearAllFiltersClick(object sender, RoutedEventArgs e)
+        {
+            ActorTextBox.Text = "";
+            YearFromTextBox.Text = "";
+            YearToTextBox.Text = "";
+
+            ApplyGenreCheckboxes(false);
+            SyncGenreSelectionFromCheckboxes();
+            UpdateGenreSectionUI();
+
+            ExcludeTrailersCheckBox.IsChecked = false;
+
+            KeywordsTextBox.Text = "";
+            KeywordFieldsCombo.SelectedIndex = 0;
+            MatchModeCombo.SelectedIndex = 0;
+            ExcludedTermsTextBox.Text = "";
+            VideoCollectionsCombo.SelectedIndex = 0;
+            OrderingCombo.SelectedIndex = 0;
+
+            ShowFilterMessage(null);
+            UpdateDiscoveryStateText();
+            UpdateScrollHint();
+        }
+
         /// <summary>The currently selected <see cref="SearchScope"/> from the launcher ComboBox.</summary>
         private SearchScope SelectedScope()
         {
@@ -307,7 +454,13 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
                 YearFromTextBox.Text,
                 YearToTextBox.Text,
                 scope,
-                currentYear);
+                currentYear,
+                KeywordsTextBox.Text,
+                ExcludedTermsTextBox.Text,
+                SelectedKeywordFields(),
+                SelectedMatchMode(),
+                SelectedVideoCollections(),
+                SelectedOrdering());
 
             if (build.State == CriteriaBuildState.NoCriteria)
             {
@@ -321,13 +474,22 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
 
             if (!build.IsValid)
             {
+                // A rejected entry blocks submission: no request is issued and a prior valid search
+                // is not re-run. The message is text-based and names what to correct.
                 SearchProgress.Visibility = Visibility.Collapsed;
                 ResultStage.Visibility = Visibility.Collapsed;
-                StatusText.Text = build.Message;
+                StatusText.Text = build.Message ?? "";
+                if (build.State == CriteriaBuildState.InvalidKeywordEntry)
+                {
+                    ShowFilterMessage(build.Message);
+                }
                 SetOpenResultsDisabled(SearchDisplayText.NoResultsLabelText);
                 UpdateScrollHint();
                 return;
             }
+
+            // The entry parsed cleanly, so any previous correction no longer applies.
+            ShowFilterMessage(null);
 
             long currentGeneration = _generation;
             var tokenSource = new CancellationTokenSource();
@@ -343,7 +505,9 @@ private void OnChoosePlayerClick(object sender, RoutedEventArgs e)
             {
                 // Genres and trailer exclusion are both narrowing options layered onto the validated
                 // criteria. They are read only when Search runs (never on toggle), and they ride
-                // along inside CompletedSearch so paging and Refresh keep them applied.
+                // along inside CompletedSearch so paging and Refresh keep them applied. The discovery
+                // dimensions are already inside build.Criteria for the same reason: the whole
+                // specification, including ordering, is carried on the immutable criteria.
                 SearchCriteria genreCriteria = build.Criteria!
                     .WithGenres(SelectedGenreKeys())
                     .WithExcludeTrailers(ExcludeTrailersCheckBox.IsChecked == true);

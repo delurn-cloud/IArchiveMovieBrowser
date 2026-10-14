@@ -58,8 +58,72 @@
                                Margin="0,0,0,2" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
                     <TextBlock x:Name="CollectionsText" FontSize="12" TextWrapping="Wrap"
                                Margin="0,0,0,2" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
-                    <TextBlock x:Name="SubjectsText" FontSize="12" TextWrapping="Wrap"
-                               Margin="0,0,0,2" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                    <StackPanel>
+                        <TextBlock Text="Subjects"
+                                   FontSize="12"
+                                   Margin="0,6,0,2"
+                                   Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                        <!-- One entry per row rather than a comma-joined sentence: some subject
+                             values themselves contain commas, so joining them made it impossible to
+                             see where one entry ended and the next began. -->
+                        <!-- Bounded in BOTH states. The expanded view used to be unbounded, which on
+                             an item with thousands of entries pushed Show fewer thousands of lines
+                             below the viewport, making the control that exits the expanded state
+                             unreachable. Keeping the height bound here - with the list's own
+                             ScrollViewer doing the scrolling - keeps Show all / Show fewer /
+                             Copy subjects permanently visible without scrolling the window. This is
+                             the one place a nested scroll area is necessary, not unnecessary. A
+                             short list still sizes to its own content because the bound is
+                             MaxHeight, not Height. -->
+                        <ListBox x:Name="SubjectsList"
+                                 MinHeight="36"
+                                 MaxHeight="130"
+                                 Margin="0,0,0,2"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
+                                 BorderThickness="1"
+                                 Foreground="{x:Static SystemColors.ControlTextBrush}"
+                                 AutomationProperties.Name="Subjects"
+                                 AutomationProperties.HelpText="Subject entries recorded by the Internet Archive for this item. Use Show all to display every entry. The list scrolls within a fixed height, so it never pushes the rest of the window out of reach.">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="4,1"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" FontSize="12" TextWrapping="NoWrap"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock x:Name="SubjectsNoticeText" FontSize="11" TextWrapping="Wrap"
+                                   Margin="0,0,0,2" Visibility="Collapsed"
+                                   Foreground="{x:Static SystemColors.ControlTextBrush}"
+                                   AutomationProperties.Name="Subjects preview notice"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <ToggleButton x:Name="SubjectsToggleButton"
+                                          Content="Show all"
+                                          Width="100" Height="26"
+                                          Margin="0,0,8,0"
+                                          HorizontalAlignment="Left"
+                                          Click="OnSubjectsToggleClick"
+                                          AutomationProperties.Name="Show all subjects"
+                                          AutomationProperties.HelpText="Displays every subject entry instead of the first 25. The list scrolls inside a fixed height, so this button always stays in view. Choose Show fewer to return to the shortened list."/>
+                            <Button x:Name="CopySubjectsButton"
+                                    Content="Copy subjects"
+                                    Width="120" Height="26"
+                                    HorizontalAlignment="Left"
+                                    Click="OnCopySubjectsClick"
+                                    AutomationProperties.Name="Copy subjects"
+                                    AutomationProperties.HelpText="Copies every subject entry to the clipboard, one per line. This copies the complete list, not just what is visible."/>
+                            <TextBlock x:Name="CopySubjectsStatusText"
+                                       Margin="10,0,0,0" FontSize="11" VerticalAlignment="Center"
+                                       TextWrapping="Wrap" Text=""
+                                       Foreground="{x:Static SystemColors.ControlTextBrush}"
+                                       AutomationProperties.Name="Copy subjects status"/>
+                            </StackPanel>
+                        </StackPanel>
                     <TextBlock x:Name="LicenseText" FontSize="12" TextWrapping="Wrap"
                                Margin="0,0,0,2" Foreground="{x:Static SystemColors.ControlTextBrush}"/>
                 </StackPanel>
@@ -124,8 +188,20 @@
                            Text="Playable video files"
                            FontSize="14" FontWeight="SemiBold" Margin="0,0,0,4"
                            Foreground="{x:Static SystemColors.ControlTextBrush}"/>
+                <!-- Multi-episode items can list one playable file per episode, which used to make this list
+                     grow without bound and push the rest of the Details view out of reach.
+                     MaxHeight (not Height) bounds it while a short list still sizes to its own
+                     content and reserves no empty area. At roughly 34 DIP per row this shows about
+                     four rows; raise it if you prefer more context at the cost of vertical space.
+                     Scrolling uses this control's own ScrollViewer, already configured below — no
+                     extra ScrollViewer is wrapped around it. The enclosing FactsPanel StackPanel
+                     sits in an unbounded vertical ScrollViewer, so nothing here suppresses that
+                     internal scrolling, and the list's default keyboard navigation and
+                     selected-item scroll-into-view are left untouched. If the list scrolls but you
+                     see no scrollbar, you are running an older build: rebuild and relaunch. -->
                 <ListView x:Name="PlayableList"
                           MinHeight="60"
+                          MaxHeight="150"
                           Margin="0,0,0,4"
                           ScrollViewer.VerticalScrollBarVisibility="Auto"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"

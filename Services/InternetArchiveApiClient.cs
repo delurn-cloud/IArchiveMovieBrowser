@@ -436,11 +436,16 @@ public sealed class InternetArchiveApiClient : IInternetArchiveApiClient
             // best effort
         }
     }
-    /// Builds the advancedsearch.php request URI. Query shape (documented): a simple
-    /// title search over the user-provided text, scoped by media-type:
+    /// Builds the advancedsearch.php request URI. Query shape (documented): a structured search
+    /// expression over the user-provided text, scoped by media-type and any collection narrowing:
     ///   q=&lt;SearchScopeQueryBuilder expression&gt;&amp;rows=&lt;page size&gt;&amp;page=&lt;page&gt;
-    ///   &amp;output=json&amp;fl=&lt;explicit field list&gt;
+    ///   &amp;output=json&amp;fl=&lt;explicit field list&gt;[&amp;sort[]=…]
     /// User text and the whole expression are percent-encoded, never concatenated raw.
+    ///
+    /// The sort parameters come from the criteria's SearchCriteria.Ordering, so paging and refresh
+    /// re-issue an identical ordering: the Internet Archive default sends no sort parameter at all,
+    /// and Most downloaded sends both its primary key and its tiebreaker. Sort text is app-controlled
+    /// catalog data, never user input.
     /// </summary>
     private static Uri BuildSearchUri(InternetArchiveSearchRequest request)
     {
@@ -451,6 +456,11 @@ public sealed class InternetArchiveApiClient : IInternetArchiveApiClient
             "&page=" + request.Page.ToString() +
             "&rows=" + request.PageSize.ToString() +
             "&fl=" + Uri.EscapeDataString(SearchFieldList);
+
+        foreach (string sortParameter in SearchDiscoveryCatalog.SortParametersFor(request.Criteria.Ordering))
+        {
+            queryString = queryString + "&" + Uri.EscapeDataString(sortParameter);
+        }
 
         return new Uri(SearchEndpoint + "?" + queryString, UriKind.Absolute);
     }
